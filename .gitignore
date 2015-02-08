@@ -1,0 +1,6 @@
+\#*
+.#*
+*~
+*pyc
+projection_layer_weights.*.tsv
+models
