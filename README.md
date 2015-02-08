@@ -1,3 +1,7 @@
+# note
+
+this code is close to 2 years old and not sure if it'll even run these days :(
+
 # summary
 
 quick theano implementation of <a href="http://machinelearning.wustl.edu/mlpapers/paper_files/BengioDVJ03.pdf">bengio et al's "a neural probabilistic language model" (2003)</a>
