@@ -20,7 +20,7 @@ here's a simple viz of the embeddings for a couple of terms over time. days are 
 
 # use
 
-<tt>
+```
 $ ./train_nplm.py --help
 Usage: nplp [options]
 
@@ -51,8 +51,7 @@ Options:
                         weights out to a file
 
 $ ./train_nplm.py --epochs 50 --n-projection-dim 2
-
-$ library(ggplot)
+```
 
 
 
