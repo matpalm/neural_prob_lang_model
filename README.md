@@ -12,6 +12,12 @@ the projection layer code (though trivial) is at least something new.
 
 for brevity trains over small set of POS tag trigrams (eg IN DT NN) so that the vocab (and hence embedding space) is very small. to get decent results need to train on a larger vocab on much more data. feature hashing works well if your vocab is huge (and, to be honest, it works well even if your vocab isn't huge due to zip's law)
 
+# eg results
+
+here's a simple viz of the embeddings for a couple of terms over time. days are (kinda) nearer to each other than some other words. kinda.
+
+![embeddings](embeddings.png?raw=true "embeddings")
+
 # use
 
 <tt>
