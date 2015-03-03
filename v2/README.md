@@ -52,6 +52,6 @@ ggplot(df, aes(d0, d1)) +
 
 ## trivial 2d embedding convergence
 
-![](embeddings.2dd.png?raw=true)
+![](embeddings.2d.png?raw=true)
 
 
