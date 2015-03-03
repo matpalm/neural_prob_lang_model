@@ -28,21 +28,11 @@ P(W3|(w1=B1,w2=C1)=[(0.494946, 'D1'), (0.47194412, 'D2'), (0.012410824, 'B1'), (
 P(W3|(w1=C1,w2=D1)=[(0.51963907, 'A2'), (0.44903326, 'A1'), (0.011842941, 'C2'), (0.007554505, 'B2')]
 P(W3|(w1=D1,w2=A1)=[(0.50821102, 'B1'), (0.45581818, 'B2'), (0.011167618, 'D1'), (0.0083318818, 'A1')]
 runtime 4.40494585037
+```
 
-<<<<<<< HEAD
 ## plot in R
 
 ```
-R>
-library(ggplot2)
-df = read.delim("embeddings.tsv", h=T)
-add a graph_label field, but only populated for final epoch
-#df$label = as.factor(df$idx)
-df$graph_label = df$label                    # copy label to graph label
-df[df$iter!=max(df$iter),]$graph_label = ""  # clear label on all but last iter
-=======
-```
-# plot in R
 R>
 library(ggplot2)
 df = read.delim("embeddings.tsv", h=T)
@@ -51,7 +41,6 @@ df = read.delim("embeddings.tsv", h=T)
 df$graph_label = df$label                    # copy label to graph label
 df[df$iter!=max(df$iter),]$graph_label = ""  # clear label on all but last iter
 # plot
->>>>>>> c4322822bef5fcf7219c1d186491a466a5f73ec6
 ggplot(df, aes(d0, d1)) + 
   geom_path(aes(size=iter, colour=label)) +
   geom_text(aes(label=graph_label))
