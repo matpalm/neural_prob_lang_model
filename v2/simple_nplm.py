@@ -100,6 +100,9 @@ for e in range(EPOCHS):
             print distribution_for('B1', 'C1')
             print distribution_for('C1', 'D1')
             print distribution_for('D1', 'A1')
+            print distribution_for('A1', 'C1')
+            print distribution_for('A1', 'D1')
+            print distribution_for('A1', 'A2')
         i += 1
 
 print "runtime", time.time() - start
