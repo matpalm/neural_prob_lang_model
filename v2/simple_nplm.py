@@ -23,6 +23,12 @@ if opts.seed is not None:
 idxs, y, token_idx = load_trigram_data(opts.trigrams_file)
 VOCAB_SIZE = token_idx.seq
 
+# for debugging build set of known distinct (w1, w2) in training data
+distinct_w1_w2 = set()
+for wi1, wi2 in idxs:
+    distinct_w1_w2.add((token_idx.idx_token[wi1], token_idx.idx_token[wi2]))
+print distinct_w1_w2
+
 # decide batching sizes
 BATCH_SIZE = opts.batch_size
 NUM_BATCHES = int(math.ceil(float(len(idxs)) / BATCH_SIZE))
@@ -64,49 +70,56 @@ softmax_output = T.argmax(p_y_given_x, axis=1)
 # cost => gradient updates => compiled training method
 print >>sys.stderr, "compiling training update"
 negative_log_likelihood = -T.mean(T.log(p_y_given_x)[T.arange(t_y.shape[0]), t_y])
+categorical_crossentropy = T.mean(T.nnet.categorical_crossentropy(p_y_given_x, t_y))
 params = [t_E, t_hW, t_hB, t_smW, t_smB]
 gradients = T.grad(cost=negative_log_likelihood, wrt=params)
+#gradients = T.grad(cost=categorical_crossentropy, wrt=params)
 updates = []
 for param, gradient in zip(params, gradients):
-    updates.append((param, param - 0.01 * gradient))
-train_model = theano.function(inputs=[t_idxs, t_y], outputs=[negative_log_likelihood], updates=updates)
+    updates.append((param, param - 0.001 * gradient))
+
+#train_model = theano.function(inputs=[t_idxs, t_y], outputs=[], updates=updates)
+train_model = theano.function(inputs=[t_idxs, t_y], outputs=[], updates=updates)
+check_model = theano.function(inputs=[t_idxs, t_y], outputs=[negative_log_likelihood])
 softmax_distribution_model = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
-#print theano.printing.debugprint(train_model)
+
+#theano.printing.pydotprint(train_model, outfile="model.png")
+#theano.printing.pydotprint(gradients, outfile="gradients.png")
 
 # debugging wrappers to dump weights over time
-embeddings_dumper = MatrixDumper("embeddings.tsv", t_E, token_idx)
-hidden_weights = MatrixDumper("hidden_weights.tsv", t_hW)
+embeddings_dumper = None  # MatrixDumper("embeddings.tsv", t_E, token_idx)
+hidden_weights = None  # MatrixDumper("hidden_weights.tsv", t_hW)
 
 def distribution_for(w1, w2):
     idxs = [[token_idx.id_for(w) for w in [w1, w2]]]
     distr, = softmax_distribution_model(idxs)
-    distr = list(reversed(sorted(zip(distr[0], token_idx.labels()))))[:4]
+    distr = list(reversed(sorted(zip(distr[0], token_idx.labels()))))[:6]
     return "P(W3|(w1=%s,w2=%s)=%s" % (w1, w2, distr)
 
 print >>sys.stderr, "training"
 start = time.time()
-i = 0
+last_batch_start = time.time()
 for e in range(EPOCHS):
+    # TODO shuffle egs
     for b in range(NUM_BATCHES):
         batch_idxs = idxs[b*BATCH_SIZE : (b+1)*BATCH_SIZE]
         batch_y = y[b*BATCH_SIZE : (b+1)*BATCH_SIZE]
-        negative_log_likelihood = train_model(batch_idxs, batch_y)
+        train_model(batch_idxs, batch_y)
 
-        if i % 5000 == 0:
-            [d.dump(e, b, i) for d in [embeddings_dumper, hidden_weights]]
-            print "e", e, "b", b, "i", i
-            print "negative_log_likelihood", negative_log_likelihood
-            print distribution_for('A1', 'B1')
-            print distribution_for('B1', 'C1')
-            print distribution_for('C1', 'D1')
-            print distribution_for('D1', 'A1')
-            print distribution_for('A1', 'C1')
-            print distribution_for('A1', 'D1')
-            print distribution_for('A1', 'A2')
-        i += 1
+    if e % 100 == 0:
+        cost = check_model(batch_idxs, batch_y)
+        for md in [embeddings_dumper, hidden_weights]:
+            if md is not None:
+                md.dump(e, b, i)
+        print "e", e, "b", b, "cost", cost, "since_last_batch", time.time() - last_batch_start
+        last_batch_start = time.time()
+        for w_1 in 'ABCDEF':
+            for w_2 in 'ABCDEF':
+                prefix = "*" if (w_1, w_2) in distinct_w1_w2 else " "
+                print prefix, distribution_for(w_1, w_2)
 
 print "runtime", time.time() - start
-embeddings_dumper.dump(EPOCHS, 0, i)
+#embeddings_dumper.dump(EPOCHS, 0, i)
 
 
 

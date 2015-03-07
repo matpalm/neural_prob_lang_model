@@ -12,7 +12,7 @@ consider a sequence generated from a random walk of the following graph. all seq
 
 ```
 # make some trivial trigram data
-$ ./simple_gen_data.py 1000 | ./ngrams.py 3 | shuf > trigrams.txt
+$ ./gen_simple_data.py 1000 | ./ngrams.py 3 | shuf > trigrams.txt
 $ head trigrams.txt -n 5
 A2 B1 C2
 A2 B2 C1
