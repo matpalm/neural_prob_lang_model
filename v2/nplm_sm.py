@@ -23,11 +23,14 @@ if opts.seed is not None:
 idxs, y, token_idx = load_trigram_data(opts.trigrams_file)
 VOCAB_SIZE = token_idx.seq
 
-# for debugging build set of known distinct (w1, w2) in training data
+# for debugging build set of known distinct (wi) & (w1, w2) in training data
+distinct_w = set()
 distinct_w1_w2 = set()
 for wi1, wi2 in idxs:
-    distinct_w1_w2.add((token_idx.idx_token[wi1], token_idx.idx_token[wi2]))
-print distinct_w1_w2
+    t1, t2 = token_idx.idx_token[wi1], token_idx.idx_token[wi2]
+    distinct_w1_w2.add((t1, t2))
+    distinct_w.add(t1)
+    distinct_w.add(t2)
 
 # decide batching sizes
 BATCH_SIZE = opts.batch_size
@@ -78,7 +81,6 @@ updates = []
 for param, gradient in zip(params, gradients):
     updates.append((param, param - 0.001 * gradient))
 
-#train_model = theano.function(inputs=[t_idxs, t_y], outputs=[], updates=updates)
 train_model = theano.function(inputs=[t_idxs, t_y], outputs=[], updates=updates)
 check_model = theano.function(inputs=[t_idxs, t_y], outputs=[negative_log_likelihood])
 softmax_distribution_model = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
@@ -87,8 +89,8 @@ softmax_distribution_model = theano.function(inputs=[t_idxs], outputs=[p_y_given
 #theano.printing.pydotprint(gradients, outfile="gradients.png")
 
 # debugging wrappers to dump weights over time
-embeddings_dumper = None  # MatrixDumper("embeddings.tsv", t_E, token_idx)
-hidden_weights = None  # MatrixDumper("hidden_weights.tsv", t_hW)
+embeddings_dumper = MatrixDumper("embeddings.tsv", t_E, token_idx)
+hidden_weights = MatrixDumper("hidden_weights.tsv", t_hW)
 
 def distribution_for(w1, w2):
     idxs = [[token_idx.id_for(w) for w in [w1, w2]]]
@@ -97,29 +99,35 @@ def distribution_for(w1, w2):
     return "P(W3|(w1=%s,w2=%s)=%s" % (w1, w2, distr)
 
 print >>sys.stderr, "training"
-start = time.time()
 last_batch_start = time.time()
+i = 0  # a counter primarily for dumping weights to file
+
 for e in range(EPOCHS):
     # TODO shuffle egs
+
+    # run all batches
     for b in range(NUM_BATCHES):
         batch_idxs = idxs[b*BATCH_SIZE : (b+1)*BATCH_SIZE]
         batch_y = y[b*BATCH_SIZE : (b+1)*BATCH_SIZE]
         train_model(batch_idxs, batch_y)
 
     if e % 100 == 0:
-        cost = check_model(batch_idxs, batch_y)
+        # print some stats
+        cost = check_model(batch_idxs, batch_y)        
+        print "e", e, "b", b, "cost", cost[0], "last_batch_time", time.time() - last_batch_start
+        last_batch_start = time.time()
+
+        # dump embeddings and weights to file
         for md in [embeddings_dumper, hidden_weights]:
             if md is not None:
-                md.dump(e, b, i)
-        print "e", e, "b", b, "cost", cost, "since_last_batch", time.time() - last_batch_start
-        last_batch_start = time.time()
-        for w_1 in 'ABCDEF':
-            for w_2 in 'ABCDEF':
+                md.dump(e, b, i)    
+        i += 1
+
+        # dump full distribution across all trigrams
+        for w_1 in distinct_w:
+            for w_2 in distinct_w:
                 prefix = "*" if (w_1, w_2) in distinct_w1_w2 else " "
                 print prefix, distribution_for(w_1, w_2)
-
-print "runtime", time.time() - start
-#embeddings_dumper.dump(EPOCHS, 0, i)
 
 
 
