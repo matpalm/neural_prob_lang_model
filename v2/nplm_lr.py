@@ -8,7 +8,7 @@ from load_data import load_trigram_data
 from matrix_dumper import MatrixDumper
 
 optparser = optparse.OptionParser(prog='nplp', version='0.0.1', description='simple neural probabilistic language model')
-optparser.add_option('--trigrams', None, dest='trigrams_file', type='string', default="trigrams.txt", help='trigrams input file')
+optparser.add_option('--trigrams', None, dest='trigrams_file', type='string', default="trigrams.with_negs.txt", help='trigrams input file')
 optparser.add_option('--batch-size', None, dest='batch_size', type='int', default=100, help='training batch size')
 optparser.add_option('--embedding-dim', None, dest='embedding_dim', type='int', default=3, help='embedding dimensionality')
 optparser.add_option('--n-hidden', None, dest='n_hidden', type='int', default=3, help='num hidden nodes')
@@ -19,17 +19,20 @@ print "options", opts
 if opts.seed is not None:
     np.random.seed(int(opts.seed))
 
-# slurp in training data, converting from "A B C" to idx "0 1 2"
+# slurp in training data, converting from "A B C" to idx "0 1 2" and storing in idxs
+# label y is either 0.0 or 1.0
 idxs, y, token_idx = load_trigram_data(opts.trigrams_file)
+print idxs[:10]
+print y[:10]
 VOCAB_SIZE = token_idx.seq
 
 # for debugging build set of known distinct (wi) & (w1, w2) in training data
 distinct_w = set()
-distinct_w1_w2 = set()
-for w_12 in idxs:
-    t_12 = [token_idx.idx_token[w] for w in w_12]
-    distinct_w1_w2.add(tuple(t_12))
-    distinct_w.update(t_12)
+distinct_w1_w2_w3 = set()
+for w_123 in idxs:
+    t_123 = [token_idx.idx_token[w] for w in w_123]
+    distinct_w1_w2_w3.add(tuple(t_123))
+    distinct_w.update(t_123)
 
 # decide batching sizes
 BATCH_SIZE = opts.batch_size
@@ -41,16 +44,16 @@ EPOCHS = opts.epochs
 print >>sys.stderr, "generating params"
 E = np.asarray(np.random.randn(VOCAB_SIZE, opts.embedding_dim), dtype='float32')
 # hidden layer weights and bias
-hW = np.asarray(np.random.randn(2 * opts.embedding_dim, opts.n_hidden), dtype='float32')
+hW = np.asarray(np.random.randn(3 * opts.embedding_dim, opts.n_hidden), dtype='float32')
 hB = np.zeros(opts.n_hidden, dtype='float32')
-# softmax weights and bias
-smW = np.asarray(np.random.randn(opts.n_hidden, VOCAB_SIZE), dtype='float32')
-smB = np.zeros(VOCAB_SIZE, dtype='float32')
+# final output logisitic regression weights and bias
+lrW = np.asarray(np.random.randn(opts.n_hidden, 1), dtype='float32')
+lrB = np.zeros(1, dtype='float32')
 
 # build up network
 print >>sys.stderr, "wrapping parms as shared T data"
-t_idxs = T.imatrix(name='idxs')  # input eg(s)
-t_y = T.ivector(name='y')        # input label(s)
+t_idxs = T.imatrix(name='idxs')  # input eg(s); w1 w2 w3
+t_y = T.ivector(name='y')        # input label(s); 1.0 or 0.0
 # embedding layer
 t_E = theano.shared(E, name='E', borrow=True)
 t_embedding_output = t_E[t_idxs].reshape((t_idxs.shape[0], -1))
@@ -58,28 +61,31 @@ t_embedding_output = t_E[t_idxs].reshape((t_idxs.shape[0], -1))
 t_hW = theano.shared(hW, name='hW', borrow=True)
 t_hB = theano.shared(hB, name='hB', borrow=True)
 t_hidden_layer_output = T.tanh(T.add(T.dot(t_embedding_output, t_hW), t_hB))
-# softmax
-t_smW = theano.shared(smW, name='smW', borrow=True)
-t_smB = theano.shared(smB, name='smB', borrow=True)
-p_y_given_x = T.nnet.softmax(T.dot(t_hidden_layer_output, t_smW) + t_smB)
-softmax_output = T.argmax(p_y_given_x, axis=1)
+# single output logistic regression
+t_lrW = theano.shared(lrW, name='lrW', borrow=True)
+t_lrB = theano.shared(lrB, name='lrB', borrow=True)
+p_y_given_x = T.nnet.sigmoid(T.dot(t_hidden_layer_output, t_lrW) + t_lrB)
 
 # cost => gradient updates => compiled training method
 print >>sys.stderr, "compiling training update"
-negative_log_likelihood = -T.mean(T.log(p_y_given_x)[T.arange(t_y.shape[0]), t_y])
-categorical_crossentropy = T.mean(T.nnet.categorical_crossentropy(p_y_given_x, t_y))
-cost = negative_log_likelihood
+#cost = T.mean(T.nnet.binary_crossentropy(p_y_given_x, t_y))
+cost = T.mean((p_y_given_x * T.log(t_y)) + (1-p_y_given_x * T.log(1-t_y)))
 
-params = [t_E, t_hW, t_hB, t_smW, t_smB]
+foo = p_y_given_x + t_y
+#foo = p_y_given_x * T.log(t_y)
+
+params = [t_E, t_hW, t_hB, t_lrW, t_lrB]
 gradients = T.grad(cost=cost, wrt=params)
-#gradients = T.grad(cost=categorical_crossentropy, wrt=params)
+
+# TODO: seriously need RMSprop, adagrad, whatever
 updates = []
 for param, gradient in zip(params, gradients):
     updates.append((param, param - 0.001 * gradient))
 
-train_model = theano.function(inputs=[t_idxs, t_y], outputs=[], updates=updates)
-check_cost = theano.function(inputs=[t_idxs, t_y], outputs=[cost])
-softmax_distribution_model = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
+#train_model = theano.function(inputs=[t_idxs, t_y], outputs=[], updates=updates)
+train_model = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
+check_cost = theano.function(inputs=[t_idxs, t_y], outputs=[foo])#cost])
+p_y = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
 
 #theano.printing.pydotprint(train_model, outfile="model.png")
 #theano.printing.pydotprint(gradients, outfile="gradients.png")
@@ -88,11 +94,15 @@ softmax_distribution_model = theano.function(inputs=[t_idxs], outputs=[p_y_given
 embeddings_dumper = MatrixDumper("embeddings.tsv", t_E, token_idx)
 hidden_weights = MatrixDumper("hidden_weights.tsv", t_hW)
 
-def distribution_for(w1, w2):
-    idxs = [[token_idx.id_for(w) for w in [w1, w2]]]
-    distr, = softmax_distribution_model(idxs)
-    distr = list(reversed(sorted(zip(distr[0], token_idx.labels()))))[:6]
-    return "P(W3|(w1=%s,w2=%s)=%s" % (w1, w2, distr)
+#def distribution_for(w1, w2):
+#    idxs = [[token_idx.id_for(w) for w in [w1, w2]]]
+#    distr, = softmax_distribution_model(idxs)
+#    distr = list(reversed(sorted(zip(distr[0], token_idx.labels()))))[:6]
+#    return "P(W3|(w1=%s,w2=%s)=%s" % (w1, w2, distr)
+
+def likelihood_of(*ws):
+    idxs = [[token_idx.id_for(w) for w in ws]]  # batch size of 1
+    return " ".join(ws), p_y(idxs)
 
 print >>sys.stderr, "training"
 last_batch_start = time.time()
@@ -105,9 +115,12 @@ for e in range(EPOCHS):
     for b in range(NUM_BATCHES):
         batch_idxs = idxs[b*BATCH_SIZE : (b+1)*BATCH_SIZE]
         batch_y = y[b*BATCH_SIZE : (b+1)*BATCH_SIZE]
-        train_model(batch_idxs, batch_y)
+        print "batch_idxs", batch_idxs, "batch_y", batch_y
+        print "train_model", train_model(batch_idxs)#, batch_y)
+        print "check_cost", check_cost(batch_idxs, batch_y)
+        exit(0)
 
-    if e % 100 == 0:
+    if e % 10 == 0:
         # print some stats
         cost = check_cost(batch_idxs, batch_y)        
         print "e", e, "b", b, "cost", cost[0], "last_batch_time", time.time() - last_batch_start
@@ -119,11 +132,9 @@ for e in range(EPOCHS):
                 md.dump(e, b, i)    
         i += 1
 
-        # dump full distribution across all trigrams
-        for w_1 in distinct_w:
-            for w_2 in distinct_w:
-                prefix = "*" if (w_1, w_2) in distinct_w1_w2 else " "
-                print prefix, distribution_for(w_1, w_2)
+        # dump a couple of known cases
+        print likelihood_of("A", "F", "C")  # 1.0
+        print likelihood_of("D", "A", "D")  # 0.0
 
 
 

@@ -24,11 +24,16 @@ class TokenIdx(object):  # todo: is there nothing like this in scipy/numpy ? hmm
 def load_trigram_data(filename):
     token_idx = TokenIdx()
     idxs = [] 
-    target = [] 
+    target = []
     for line in open(filename, 'r'):
-        trigram = line.strip().split()
-        w1_idx, w2_idx, w3_idx = [token_idx.id_for(w) for w in trigram] 
-        # print "trigram %s => data=[%s, %s] target=%s" % (trigram, w1_idx, w2_idx, w3_idx)
-        idxs.append([w1_idx, w2_idx])
-        target.append(w3_idx)
+        record = line.strip().split()
+        w1_idx, w2_idx, w3_idx = [token_idx.id_for(w) for w in record[:3]]
+        if len(record) == 3:
+            # just trigram
+            idxs.append([w1_idx, w2_idx])
+            target.append(w3_idx)
+        elif len(record) == 4:
+            # trigram with label
+            idxs.append([w1_idx, w2_idx, w3_idx])
+            target.append(float(record[3]))
     return (np.asarray(idxs, dtype='int32'), np.asarray(target, dtype='int32'), token_idx)
