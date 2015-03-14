@@ -133,7 +133,7 @@ e 2040 b 188 cost 0.371997481934 last_batch_time 0.262334108353
 1153  C C B  0.13323   # 0.0, hallucinated in sm but more explicit no in this case.
 ```
 
-over time
+over time (note: includes large y jitter)
 
 ![](nplm_lr.png?raw=true)
 
