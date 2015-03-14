@@ -122,5 +122,26 @@ B C A 0
 
 then train nplm_lr.py 
 
-WIP
+```
+e 2040 b 188 cost 0.371997481934 last_batch_time 0.262334108353
+1153  F C E  0.858568  # 1.0, freq 1450, rank 1/50 of pos
+1153  F B A  0.584878  # 1.0, freq 16, rank 46/50
+1153  C E B  0.133438  # 0.0, freq 827, rank 1/80 of negs
+1153  D C D  0.78613   # 0.0, freq 14, rank 75/80
+1153  F A A  0.60761   # 1.0, from nplm_sm,  FAA 60% vs FAF
+1153  F A F  0.60761   # 1.0, see above
+1153  C C B  0.13323   # 0.0, hallucinated in sm but more explicit no in this case.
+```
 
+over time
+
+![](nplm_lr.png?raw=true)
+
+interesting that FAF and FAA become so tied
+
+TODOS
+
+* over time likelihood plot for nplm_sm
+* P/R of all pairs, comparing sm vs lr. 
+* calc diff in params, do for fixed training time budget
+* bigger vocabs

@@ -88,9 +88,9 @@ p_y = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
 embeddings_dumper = MatrixDumper("embeddings.tsv", t_E, token_idx)
 hidden_weights = MatrixDumper("hidden_weights.tsv", t_hW)
 
-def likelihood_of(*ws):
+def print_likelihood_of(i, ws):
     idxs = [[token_idx.id_for(w) for w in ws]]  # batch size of 1
-    return " ".join(ws), p_y(idxs)
+    print "\t".join(map(str, [i, " ".join(ws), p_y(idxs)[0][0][0]]))  # no, i'm not joking :/
 
 print >>sys.stderr, "training"
 last_batch_start = time.time()
@@ -107,19 +107,24 @@ for e in range(EPOCHS):
 
     if e % 10 == 0:
         # print some stats
+        i += 1
         cost = check_cost(batch_idxs, batch_y)        
-        print "e", e, "b", b, "cost", cost[0], "last_batch_time", time.time() - last_batch_start
+        print "XXe", e, "b", b, "last_batch_time", time.time() - last_batch_start
+        print "%s\tcost\t%s" % (i, cost[0])
         last_batch_start = time.time()
 
         # dump embeddings and weights to file
         for md in [embeddings_dumper, hidden_weights]:
             if md is not None:
                 md.dump(e, b, i)    
-        i += 1
 
         # dump a couple of known cases
-        print likelihood_of("A", "F", "C")  # 1.0
-        print likelihood_of("D", "A", "D")  # 0.0
+        print_likelihood_of(i, "FCE")  # 1.0, freq 1450, rank 1/50
+        print_likelihood_of(i, "FBA")  # 1.0, freq 16, rank 46/50
+        print_likelihood_of(i, "CEB")  # 0.0, freq 827, rank 1/80
+        print_likelihood_of(i, "DCD")  # 0.0, freq 14, rank 75/80
 
-
-
+        # and from prior nplm_sm model
+        print_likelihood_of(i, "FAA")  # 1.0, 66% for FA cases
+        print_likelihood_of(i, "FAF")  # 1.0, 33% for FA cases
+        print_likelihood_of(i, "CCB")  # 0.0, prior model could hallucinate up to 40%
