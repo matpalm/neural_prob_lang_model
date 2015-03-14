@@ -38,7 +38,6 @@ print "#egs", len(idxs), "batch_size", BATCH_SIZE, "=> num_batches", NUM_BATCHES
 EPOCHS = opts.epochs
 
 # embeddings matrix
-print >>sys.stderr, "generating params"
 E = np.asarray(np.random.randn(VOCAB_SIZE, opts.embedding_dim), dtype='float32')
 # hidden layer weights and bias
 hW = np.asarray(np.random.randn(2 * opts.embedding_dim, opts.n_hidden), dtype='float32')
@@ -48,7 +47,6 @@ smW = np.asarray(np.random.randn(opts.n_hidden, VOCAB_SIZE), dtype='float32')
 smB = np.zeros(VOCAB_SIZE, dtype='float32')
 
 # build up network
-print >>sys.stderr, "wrapping parms as shared T data"
 t_idxs = T.imatrix(name='idxs')  # input eg(s)
 t_y = T.ivector(name='y')        # input label(s)
 # embedding layer
@@ -65,7 +63,6 @@ p_y_given_x = T.nnet.softmax(T.dot(t_hidden_layer_output, t_smW) + t_smB)
 softmax_output = T.argmax(p_y_given_x, axis=1)
 
 # cost => gradient updates => compiled training method
-print >>sys.stderr, "compiling training update"
 negative_log_likelihood = -T.mean(T.log(p_y_given_x)[T.arange(t_y.shape[0]), t_y])
 categorical_crossentropy = T.mean(T.nnet.categorical_crossentropy(p_y_given_x, t_y))
 cost = negative_log_likelihood

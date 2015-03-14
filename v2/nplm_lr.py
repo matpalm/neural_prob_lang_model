@@ -22,8 +22,6 @@ if opts.seed is not None:
 # slurp in training data, converting from "A B C" to idx "0 1 2" and storing in idxs
 # label y is either 0.0 or 1.0
 idxs, y, token_idx = load_trigram_data(opts.trigrams_file)
-print idxs[:10]
-print y[:10]
 VOCAB_SIZE = token_idx.seq
 
 # for debugging build set of known distinct (wi) & (w1, w2) in training data
@@ -41,7 +39,6 @@ print "#egs", len(idxs), "batch_size", BATCH_SIZE, "=> num_batches", NUM_BATCHES
 EPOCHS = opts.epochs
 
 # embeddings matrix
-print >>sys.stderr, "generating params"
 E = np.asarray(np.random.randn(VOCAB_SIZE, opts.embedding_dim), dtype='float32')
 # hidden layer weights and bias
 hW = np.asarray(np.random.randn(3 * opts.embedding_dim, opts.n_hidden), dtype='float32')
@@ -51,7 +48,6 @@ lrW = np.asarray(np.random.randn(opts.n_hidden, 1), dtype='float32')
 lrB = np.zeros(1, dtype='float32')
 
 # build up network
-print >>sys.stderr, "wrapping parms as shared T data"
 t_idxs = T.imatrix(name='idxs')  # input eg(s); w1 w2 w3
 t_y = T.ivector(name='y')        # input label(s); 1.0 or 0.0
 # embedding layer
@@ -64,15 +60,14 @@ t_hidden_layer_output = T.tanh(T.add(T.dot(t_embedding_output, t_hW), t_hB))
 # single output logistic regression
 t_lrW = theano.shared(lrW, name='lrW', borrow=True)
 t_lrB = theano.shared(lrB, name='lrB', borrow=True)
-p_y_given_x = T.nnet.sigmoid(T.dot(t_hidden_layer_output, t_lrW) + t_lrB)
+p_y_given_x = T.nnet.sigmoid(T.dot(t_hidden_layer_output, t_lrW) + t_lrB).T
 
 # cost => gradient updates => compiled training method
-print >>sys.stderr, "compiling training update"
-#cost = T.mean(T.nnet.binary_crossentropy(p_y_given_x, t_y))
-cost = T.mean((p_y_given_x * T.log(t_y)) + (1-p_y_given_x * T.log(1-t_y)))
+cost = T.mean(T.nnet.binary_crossentropy(p_y_given_x, t_y))
 
-foo = p_y_given_x + t_y
-#foo = p_y_given_x * T.log(t_y)
+# trying to explicitly lay this out results in NaNs? but formula the same? (?)
+# there seems to be some numerical stability trick/optimisation that's not coming into play...
+#cost = T.mean((p_y_given_x * T.log(t_y)) + (1-p_y_given_x * T.log(1-t_y)))
 
 params = [t_E, t_hW, t_hB, t_lrW, t_lrB]
 gradients = T.grad(cost=cost, wrt=params)
@@ -82,9 +77,8 @@ updates = []
 for param, gradient in zip(params, gradients):
     updates.append((param, param - 0.001 * gradient))
 
-#train_model = theano.function(inputs=[t_idxs, t_y], outputs=[], updates=updates)
-train_model = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
-check_cost = theano.function(inputs=[t_idxs, t_y], outputs=[foo])#cost])
+train_model = theano.function(inputs=[t_idxs, t_y], outputs=[], updates=updates)
+check_cost = theano.function(inputs=[t_idxs, t_y], outputs=[cost])
 p_y = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
 
 #theano.printing.pydotprint(train_model, outfile="model.png")
@@ -93,12 +87,6 @@ p_y = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
 # debugging wrappers to dump weights over time
 embeddings_dumper = MatrixDumper("embeddings.tsv", t_E, token_idx)
 hidden_weights = MatrixDumper("hidden_weights.tsv", t_hW)
-
-#def distribution_for(w1, w2):
-#    idxs = [[token_idx.id_for(w) for w in [w1, w2]]]
-#    distr, = softmax_distribution_model(idxs)
-#    distr = list(reversed(sorted(zip(distr[0], token_idx.labels()))))[:6]
-#    return "P(W3|(w1=%s,w2=%s)=%s" % (w1, w2, distr)
 
 def likelihood_of(*ws):
     idxs = [[token_idx.id_for(w) for w in ws]]  # batch size of 1
@@ -115,10 +103,7 @@ for e in range(EPOCHS):
     for b in range(NUM_BATCHES):
         batch_idxs = idxs[b*BATCH_SIZE : (b+1)*BATCH_SIZE]
         batch_y = y[b*BATCH_SIZE : (b+1)*BATCH_SIZE]
-        print "batch_idxs", batch_idxs, "batch_y", batch_y
-        print "train_model", train_model(batch_idxs)#, batch_y)
-        print "check_cost", check_cost(batch_idxs, batch_y)
-        exit(0)
+        train_model(batch_idxs, batch_y)
 
     if e % 10 == 0:
         # print some stats
