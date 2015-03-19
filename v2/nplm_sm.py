@@ -15,7 +15,7 @@ optparser.add_option('--n-hidden', None, dest='n_hidden', type='int', default=3,
 optparser.add_option('--seed', None, dest='seed', type='int', default=None, help='rng seed')
 optparser.add_option('--epochs', None, dest='epochs', type='int', default=20000, help='epochs to run')
 opts, arguments = optparser.parse_args()
-print "options", opts
+print >>sys.stderr, "options", opts
 if opts.seed is not None:
     np.random.seed(int(opts.seed))
 
@@ -34,7 +34,7 @@ for w_12 in idxs:
 # decide batching sizes
 BATCH_SIZE = opts.batch_size
 NUM_BATCHES = int(math.ceil(float(len(idxs)) / BATCH_SIZE))
-print "#egs", len(idxs), "batch_size", BATCH_SIZE, "=> num_batches", NUM_BATCHES
+print >>sys.stderr, "#egs", len(idxs), "batch_size", BATCH_SIZE, "=> num_batches", NUM_BATCHES
 EPOCHS = opts.epochs
 
 # embeddings matrix
@@ -82,14 +82,15 @@ softmax_distribution_model = theano.function(inputs=[t_idxs], outputs=[p_y_given
 #theano.printing.pydotprint(gradients, outfile="gradients.png")
 
 # debugging wrappers to dump weights over time
-embeddings_dumper = MatrixDumper("embeddings.tsv", t_E, token_idx)
-hidden_weights = MatrixDumper("hidden_weights.tsv", t_hW)
+embeddings_dumper = None  #MatrixDumper("embeddings.tsv", t_E, token_idx)
+hidden_weights = None  #MatrixDumper("hidden_weights.tsv", t_hW)
 
-def distribution_for(w1, w2):
+def print_distribution_for(i, w1, w2):
     idxs = [[token_idx.id_for(w) for w in [w1, w2]]]
-    distr, = softmax_distribution_model(idxs)
-    distr = list(reversed(sorted(zip(distr[0], token_idx.labels()))))[:6]
-    return "P(W3|(w1=%s,w2=%s)=%s" % (w1, w2, distr)
+    distr = softmax_distribution_model(idxs)[0][0]
+    for idx, prob in enumerate(distr):
+        w3 = token_idx.token_for(idx)
+        print "%s\t%s %s %s\t%s" % (i, w1, w2, w3, prob)
 
 print >>sys.stderr, "training"
 last_batch_start = time.time()
@@ -106,21 +107,29 @@ for e in range(EPOCHS):
 
     if e % 100 == 0:
         # print some stats
+        i += 1
         cost = check_cost(batch_idxs, batch_y)        
-        print "e", e, "b", b, "cost", cost[0], "last_batch_time", time.time() - last_batch_start
+        print >>sys.stderr, "e", e, "i", i, "cost", cost[0], "last_batch_time", time.time() - last_batch_start
         last_batch_start = time.time()
 
         # dump embeddings and weights to file
         for md in [embeddings_dumper, hidden_weights]:
             if md is not None:
                 md.dump(e, b, i)    
-        i += 1
 
         # dump full distribution across all trigrams
-        for w_1 in distinct_w:
-            for w_2 in distinct_w:
-                prefix = "*" if (w_1, w_2) in distinct_w1_w2 else " "
-                print prefix, distribution_for(w_1, w_2)
+        #for w_1 in distinct_w:
+        #    for w_2 in distinct_w:
+        #        prefix = "*" if (w_1, w_2) in distinct_w1_w2 else " "
+        #        print prefix, distribution_for(w_1, w_2)
+        #for w1w2 in ['FA', 'CB', 'CC']:
+        #    w1, w2 = w1w2
+        #    print_distribution_for(i, w1, w2)
+
+
+for w1w2 in ['FA', 'CB', 'CC']:
+    w1, w2 = w1w2
+    print_distribution_for(i, w1, w2)
 
 
 

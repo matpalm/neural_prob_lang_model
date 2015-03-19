@@ -15,7 +15,7 @@ optparser.add_option('--n-hidden', None, dest='n_hidden', type='int', default=3,
 optparser.add_option('--seed', None, dest='seed', type='int', default=None, help='rng seed')
 optparser.add_option('--epochs', None, dest='epochs', type='int', default=20000, help='epochs to run')
 opts, arguments = optparser.parse_args()
-print "options", opts
+print >>sys.stderr, "options", opts
 if opts.seed is not None:
     np.random.seed(int(opts.seed))
 
@@ -35,7 +35,7 @@ for w_123 in idxs:
 # decide batching sizes
 BATCH_SIZE = opts.batch_size
 NUM_BATCHES = int(math.ceil(float(len(idxs)) / BATCH_SIZE))
-print "#egs", len(idxs), "batch_size", BATCH_SIZE, "=> num_batches", NUM_BATCHES
+print >>sys.stderr, "#egs", len(idxs), "batch_size", BATCH_SIZE, "=> num_batches", NUM_BATCHES
 EPOCHS = opts.epochs
 
 # embeddings matrix
@@ -92,7 +92,6 @@ def print_likelihood_of(i, ws):
     idxs = [[token_idx.id_for(w) for w in ws]]  # batch size of 1
     print "\t".join(map(str, [i, " ".join(ws), p_y(idxs)[0][0][0]]))  # no, i'm not joking :/
 
-print >>sys.stderr, "training"
 last_batch_start = time.time()
 i = 0  # a counter primarily for dumping weights to file
 
@@ -109,7 +108,7 @@ for e in range(EPOCHS):
         # print some stats
         i += 1
         cost = check_cost(batch_idxs, batch_y)        
-        print "XXe", e, "b", b, "last_batch_time", time.time() - last_batch_start
+        print >>sys.stderr, "e", e, "i", i, "cost", cost[0], "last_batch_time", time.time() - last_batch_start
         print "%s\tcost\t%s" % (i, cost[0])
         last_batch_start = time.time()
 
@@ -118,13 +117,7 @@ for e in range(EPOCHS):
             if md is not None:
                 md.dump(e, b, i)    
 
-        # dump a couple of known cases
-        print_likelihood_of(i, "FCE")  # 1.0, freq 1450, rank 1/50
-        print_likelihood_of(i, "FBA")  # 1.0, freq 16, rank 46/50
-        print_likelihood_of(i, "CEB")  # 0.0, freq 827, rank 1/80
-        print_likelihood_of(i, "DCD")  # 0.0, freq 14, rank 75/80
-
-        # and from prior nplm_sm model
-        print_likelihood_of(i, "FAA")  # 1.0, 66% for FA cases
-        print_likelihood_of(i, "FAF")  # 1.0, 33% for FA cases
-        print_likelihood_of(i, "CCB")  # 0.0, prior model could hallucinate up to 40%
+        # dump a couple of known cases (see blog post for freq analysis)
+        for w1w2 in ['FA', 'CB', 'CC']:
+            for w3 in "ABCDEF":
+                print_likelihood_of(i, w1w2 + w3)

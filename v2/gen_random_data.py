@@ -25,7 +25,7 @@ def label(i):
     return labels[i % len(labels)]
 
 if opts.to_dot:
-    print "digraph G { rankdir=LR; "
+    print "digraph G { rankdir=LR; bgcolor=\"transparent\" "
     for i, j in er.edges():
         print "%s_%s -> %s_%s" % (label(i), i, label(j), j)
     print "}"

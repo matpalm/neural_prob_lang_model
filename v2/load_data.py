@@ -4,7 +4,7 @@ class TokenIdx(object):  # todo: is there nothing like this in scipy/numpy ? hmm
 
     def __init__(self):
         self.token_idx = {}
-        self.idx_token = {}  # debug only
+        self.idx_token = {}
         self.tokens = set()
         self.seq = 0
 
@@ -17,6 +17,9 @@ class TokenIdx(object):  # todo: is there nothing like this in scipy/numpy ? hmm
             self.tokens.add(token)
             self.seq += 1
             return self.seq - 1
+
+    def token_for(self, idx):
+        return self.idx_token[idx]
 
     def labels(self):
         return [self.idx_token[i] for i in range(self.seq)]

@@ -2,7 +2,7 @@
 
 update of NPLM to play with visualising embeddings.
 
-see <a href="http://matpalm.com/blog/">blog</a> (still wip)
+see <a href="http://matpalm.com/blog/2015/03/15/hallucinating_softmaxs/">http://matpalm.com/blog/2015/03/15/hallucinating_softmaxs/</a>
 
 ## build simple embeddings for graph with "equivalent" nodes
 
@@ -139,9 +139,10 @@ over time (note: includes large y jitter)
 
 interesting that FAF and FAA become so tied
 
+# 
+$ cat *final | awk -F'   ' '{print $2 "\t" substr($2,0,4) "\t" $3}'
+
 TODOS
 
-* over time likelihood plot for nplm_sm
-* P/R of all pairs, comparing sm vs lr. 
 * calc diff in params, do for fixed training time budget
 * bigger vocabs

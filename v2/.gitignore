@@ -1,2 +1,4 @@
+.RData
+.Rhistory
 embeddings.tsv
 hidden_weights.tsv
