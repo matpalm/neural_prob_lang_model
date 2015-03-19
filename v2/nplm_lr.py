@@ -14,6 +14,8 @@ optparser.add_option('--embedding-dim', None, dest='embedding_dim', type='int', 
 optparser.add_option('--n-hidden', None, dest='n_hidden', type='int', default=3, help='num hidden nodes')
 optparser.add_option('--seed', None, dest='seed', type='int', default=None, help='rng seed')
 optparser.add_option('--epochs', None, dest='epochs', type='int', default=20000, help='epochs to run')
+optparser.add_option('--lambda1', None, dest='lambda1', type='float', default=0.0, help='l1 regularisation weight')
+optparser.add_option('--lambda2', None, dest='lambda2', type='float', default=0.0, help='l2 regularisation weight')
 opts, arguments = optparser.parse_args()
 print >>sys.stderr, "options", opts
 if opts.seed is not None:
@@ -38,6 +40,7 @@ BATCH_SIZE = opts.batch_size
 NUM_BATCHES = int(math.ceil(float(len(idxs)) / BATCH_SIZE))
 print >>sys.stderr, "#egs", len(idxs), "batch_size", BATCH_SIZE, "=> num_batches", NUM_BATCHES
 EPOCHS = opts.epochs
+LAMBDA1, LAMBDA2 = opts.lambda1, opts.lambda2
 
 # embeddings matrix
 E = np.asarray(np.random.randn(VOCAB_SIZE, opts.embedding_dim), dtype='float32')
@@ -63,8 +66,13 @@ t_lrW = theano.shared(lrW, name='lrW', borrow=True)
 t_lrB = theano.shared(lrB, name='lrB', borrow=True)
 p_y_given_x = T.nnet.sigmoid(T.dot(t_hidden_layer_output, t_lrW) + t_lrB).T
 
+# params to regularise; not embeddings, nor biases.
+regularised_params = [t_hW, t_lrW]
+L1 = T.sum([T.sum(abs(p)) for p in regularised_params])
+L2 = T.sum([T.sum(p*p) for p in regularised_params])
+
 # cost => gradient updates => compiled training method
-cost = T.mean(T.nnet.binary_crossentropy(p_y_given_x, t_y))
+cost = T.mean(T.nnet.binary_crossentropy(p_y_given_x, t_y)) + (LAMBDA1 * L1) + (LAMBDA2 * L2)
 
 # trying to explicitly lay this out results in NaNs? but formula the same? (?)
 # there seems to be some numerical stability trick/optimisation that's not coming into play...
@@ -72,11 +80,9 @@ cost = T.mean(T.nnet.binary_crossentropy(p_y_given_x, t_y))
 
 params = [t_E, t_hW, t_hB, t_lrW, t_lrB]
 gradients = T.grad(cost=cost, wrt=params)
-
-# TODO: seriously need RMSprop, adagrad, whatever
 updates = []
 for param, gradient in zip(params, gradients):
-    updates.append((param, param - 0.001 * gradient))
+    updates.append((param, param - 0.001 * gradient))  # TODO: seriously need RMSprop, adagrad, whatever
 
 train_model = theano.function(inputs=[t_idxs, t_y], outputs=[], updates=updates)
 check_cost = theano.function(inputs=[t_idxs, t_y], outputs=[cost])
