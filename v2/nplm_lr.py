@@ -19,8 +19,9 @@ print >>sys.stderr, "options", opts
 if opts.seed is not None:
     np.random.seed(int(opts.seed))
 
-# slurp in training data, converting from "A B C" to idx "0 1 2" and storing in idxs
-# label y is either 0.0 or 1.0
+# slurp in training data, converting from "C A B" to idx "0 1 2" and storing in idxs
+# idxs => (w1, w2, w3)
+# label y => 1.0 or 0.0
 idxs, y, token_idx = load_trigram_data(opts.trigrams_file)
 VOCAB_SIZE = token_idx.seq
 
@@ -104,12 +105,11 @@ for e in range(EPOCHS):
         batch_y = y[b*BATCH_SIZE : (b+1)*BATCH_SIZE]
         train_model(batch_idxs, batch_y)
 
-    if e % 10 == 0:
+    if e % 100 == 0:
         # print some stats
         i += 1
         cost = check_cost(batch_idxs, batch_y)        
         print >>sys.stderr, "e", e, "i", i, "cost", cost[0], "last_batch_time", time.time() - last_batch_start
-        print "%s\tcost\t%s" % (i, cost[0])
         last_batch_start = time.time()
 
         # dump embeddings and weights to file
@@ -117,7 +117,7 @@ for e in range(EPOCHS):
             if md is not None:
                 md.dump(e, b, i)    
 
-        # dump a couple of known cases (see blog post for freq analysis)
-        for w1w2 in ['FA', 'CB', 'CC']:
-            for w3 in "ABCDEF":
-                print_likelihood_of(i, w1w2 + w3)
+# dump a couple of known cases (see blog post for freq analysis)
+for w1w2 in ['FA', 'CB', 'CC']:
+    for w3 in "ABCDEF":
+        print_likelihood_of(i, w1w2 + w3)

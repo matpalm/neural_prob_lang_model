@@ -19,7 +19,9 @@ print >>sys.stderr, "options", opts
 if opts.seed is not None:
     np.random.seed(int(opts.seed))
 
-# slurp in training data, converting from "A B C" to idx "0 1 2"
+# slurp in training data, converting from "C A B" to idx "0 1 2" and storing in idxs
+# idxs => (w1, w2)
+# label y => w3
 idxs, y, token_idx = load_trigram_data(opts.trigrams_file)
 VOCAB_SIZE = token_idx.seq
 
@@ -47,8 +49,8 @@ smW = np.asarray(np.random.randn(opts.n_hidden, VOCAB_SIZE), dtype='float32')
 smB = np.zeros(VOCAB_SIZE, dtype='float32')
 
 # build up network
-t_idxs = T.imatrix(name='idxs')  # input eg(s)
-t_y = T.ivector(name='y')        # input label(s)
+t_idxs = T.imatrix(name='idxs')  # input eg(s); w1 w2
+t_y = T.ivector(name='y')        # input label(s); w3
 # embedding layer
 t_E = theano.shared(E, name='E', borrow=True)
 t_embedding_output = t_E[t_idxs].reshape((t_idxs.shape[0], -1))
@@ -69,7 +71,6 @@ cost = negative_log_likelihood
 
 params = [t_E, t_hW, t_hB, t_smW, t_smB]
 gradients = T.grad(cost=cost, wrt=params)
-#gradients = T.grad(cost=categorical_crossentropy, wrt=params)
 updates = []
 for param, gradient in zip(params, gradients):
     updates.append((param, param - 0.001 * gradient))
@@ -82,8 +83,8 @@ softmax_distribution_model = theano.function(inputs=[t_idxs], outputs=[p_y_given
 #theano.printing.pydotprint(gradients, outfile="gradients.png")
 
 # debugging wrappers to dump weights over time
-embeddings_dumper = None  #MatrixDumper("embeddings.tsv", t_E, token_idx)
-hidden_weights = None  #MatrixDumper("hidden_weights.tsv", t_hW)
+embeddings_dumper = MatrixDumper("embeddings.tsv", t_E, token_idx)
+hidden_weights = MatrixDumper("hidden_weights.tsv", t_hW)
 
 def print_distribution_for(i, w1, w2):
     idxs = [[token_idx.id_for(w) for w in [w1, w2]]]
@@ -92,7 +93,6 @@ def print_distribution_for(i, w1, w2):
         w3 = token_idx.token_for(idx)
         print "%s\t%s %s %s\t%s" % (i, w1, w2, w3, prob)
 
-print >>sys.stderr, "training"
 last_batch_start = time.time()
 i = 0  # a counter primarily for dumping weights to file
 
@@ -117,16 +117,7 @@ for e in range(EPOCHS):
             if md is not None:
                 md.dump(e, b, i)    
 
-        # dump full distribution across all trigrams
-        #for w_1 in distinct_w:
-        #    for w_2 in distinct_w:
-        #        prefix = "*" if (w_1, w_2) in distinct_w1_w2 else " "
-        #        print prefix, distribution_for(w_1, w_2)
-        #for w1w2 in ['FA', 'CB', 'CC']:
-        #    w1, w2 = w1w2
-        #    print_distribution_for(i, w1, w2)
-
-
+# dump full distribution across all trigrams
 for w1w2 in ['FA', 'CB', 'CC']:
     w1, w2 = w1w2
     print_distribution_for(i, w1, w2)
