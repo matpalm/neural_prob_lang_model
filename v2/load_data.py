@@ -24,19 +24,21 @@ class TokenIdx(object):  # todo: is there nothing like this in scipy/numpy ? hmm
     def labels(self):
         return [self.idx_token[i] for i in range(self.seq)]
 
-def load_trigram_data(filename):
+def load_trigram_data(filename, mode):
     token_idx = TokenIdx()
     idxs = [] 
     target = []
     for line in open(filename, 'r'):
         record = line.strip().split()
         w1_idx, w2_idx, w3_idx = [token_idx.id_for(w) for w in record[:3]]
-        if len(record) == 3:
+        if len(record) == 3 and mode=='sm':
             # just trigram
             idxs.append([w1_idx, w2_idx])
             target.append(w3_idx)
-        elif len(record) == 4:
+        elif len(record) == 4 and mode=='lr':
             # trigram with label
             idxs.append([w1_idx, w2_idx, w3_idx])
             target.append(float(record[3]))
+        else:
+            raise Exception("expected 3 token for mode=sm and 4 tokens for mode=lr, not %s tokens for mode %s" % (len(record), mode))
     return (np.asarray(idxs, dtype='int32'), np.asarray(target, dtype='int32'), token_idx)

@@ -24,7 +24,7 @@ if opts.seed is not None:
 # slurp in training data, converting from "C A B" to idx "0 1 2" and storing in idxs
 # idxs => (w1, w2)
 # label y => w3
-idxs, y, token_idx = load_trigram_data(opts.trigrams_file)
+idxs, y, token_idx = load_trigram_data(opts.trigrams_file, 'sm')
 VOCAB_SIZE = token_idx.seq
 
 # for debugging build set of known distinct (wi) & (w1, w2) in training data
