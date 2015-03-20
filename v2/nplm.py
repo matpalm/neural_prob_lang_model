@@ -8,7 +8,8 @@ from load_data import load_trigram_data
 from matrix_dumper import MatrixDumper
 
 optparser = optparse.OptionParser(prog='nplp', version='0.0.1', description='simple neural probabilistic language model')
-optparser.add_option('--trigrams', None, dest='trigrams_file', type='string', default="trigrams.with_negs.txt", help='trigrams input file')
+optparser.add_option('--mode', None, dest='mode', type='string', default="sm", help='top layer mode; sm=softmax, lr=logistic regression')
+optparser.add_option('--trigrams', None, dest='trigrams_file', type='string', default="trigrams.txt", help='trigrams input file')
 optparser.add_option('--batch-size', None, dest='batch_size', type='int', default=100, help='training batch size')
 optparser.add_option('--embedding-dim', None, dest='embedding_dim', type='int', default=3, help='embedding dimensionality')
 optparser.add_option('--n-hidden', None, dest='n_hidden', type='int', default=3, help='num hidden nodes')
@@ -20,20 +21,14 @@ opts, arguments = optparser.parse_args()
 print >>sys.stderr, "options", opts
 if opts.seed is not None:
     np.random.seed(int(opts.seed))
+if opts.mode not in ['sm', 'lr']:
+    raise Exception("mode must be one of 'sm' or 'lr' not '%s'" % opts.mode)
 
 # slurp in training data, converting from "C A B" to idx "0 1 2" and storing in idxs
-# idxs => (w1, w2, w3)
-# label y => 1.0 or 0.0
-idxs, y, token_idx = load_trigram_data(opts.trigrams_file, 'lr')
+# idxs => (w1, w2, w3) for lr; (w1, w2) for sm
+# label y => 1.0 or 0.0 for lr; w3 for sm
+idxs, y, token_idx = load_trigram_data(opts.trigrams_file, opts.mode)
 VOCAB_SIZE = token_idx.seq
-
-# for debugging build set of known distinct (wi) & (w1, w2) in training data
-distinct_w = set()
-distinct_w1_w2_w3 = set()
-for w_123 in idxs:
-    t_123 = [token_idx.idx_token[w] for w in w_123]
-    distinct_w1_w2_w3.add(tuple(t_123))
-    distinct_w.update(t_123)
 
 # decide batching sizes
 BATCH_SIZE = opts.batch_size
@@ -44,16 +39,18 @@ LAMBDA1, LAMBDA2 = opts.lambda1, opts.lambda2
 
 # embeddings matrix
 E = np.asarray(np.random.randn(VOCAB_SIZE, opts.embedding_dim), dtype='float32')
+NUM_EMBEDDING_NODES = 3 if opts.mode=='lr' else 2
 # hidden layer weights and bias
-hW = np.asarray(np.random.randn(3 * opts.embedding_dim, opts.n_hidden), dtype='float32')
+hW = np.asarray(np.random.randn(NUM_EMBEDDING_NODES * opts.embedding_dim, opts.n_hidden), dtype='float32')
 hB = np.zeros(opts.n_hidden, dtype='float32')
-# final output logisitic regression weights and bias
-lrW = np.asarray(np.random.randn(opts.n_hidden, 1), dtype='float32')
-lrB = np.zeros(1, dtype='float32')
+# output weights and bias
+NUM_OUTPUT_NODES = 1 if opts.mode=='lr' else VOCAB_SIZE
+oW = np.asarray(np.random.randn(opts.n_hidden, NUM_OUTPUT_NODES), dtype='float32')
+oB = np.zeros(NUM_OUTPUT_NODES, dtype='float32')
 
 # build up network
-t_idxs = T.imatrix(name='idxs')  # input eg(s); w1 w2 w3
-t_y = T.ivector(name='y')        # input label(s); 1.0 or 0.0
+t_idxs = T.imatrix(name='idxs')  # input egs
+t_y = T.ivector(name='y')        # input labels
 # embedding layer
 t_E = theano.shared(E, name='E', borrow=True)
 t_embedding_output = t_E[t_idxs].reshape((t_idxs.shape[0], -1))
@@ -61,24 +58,27 @@ t_embedding_output = t_E[t_idxs].reshape((t_idxs.shape[0], -1))
 t_hW = theano.shared(hW, name='hW', borrow=True)
 t_hB = theano.shared(hB, name='hB', borrow=True)
 t_hidden_layer_output = T.tanh(T.add(T.dot(t_embedding_output, t_hW), t_hB))
-# single output logistic regression
-t_lrW = theano.shared(lrW, name='lrW', borrow=True)
-t_lrB = theano.shared(lrB, name='lrB', borrow=True)
-p_y_given_x = T.nnet.sigmoid(T.dot(t_hidden_layer_output, t_lrW) + t_lrB).T
+# output layer; sigmoid for logisitic regression, softmax for, err, softmax
+t_oW = theano.shared(oW, name='oW', borrow=True)
+t_oB = theano.shared(oB, name='oB', borrow=True)
+output_activation_function = T.nnet.sigmoid if opts.mode=='lr' else T.nnet.softmax
+p_y_given_x = output_activation_function(T.dot(t_hidden_layer_output, t_oW) + t_oB)
+#softmax_output = T.argmax(p_y_given_x, axis=1)
 
 # params to regularise; not embeddings, nor biases.
-regularised_params = [t_hW, t_lrW]
+regularised_params = [t_hW, t_oW]
 L1 = T.sum([T.sum(abs(p)) for p in regularised_params])
 L2 = T.sum([T.sum(p*p) for p in regularised_params])
 
-# cost => gradient updates => compiled training method
-cost = T.mean(T.nnet.binary_crossentropy(p_y_given_x, t_y)) + (LAMBDA1 * L1) + (LAMBDA2 * L2)
+# cost 
+if opts.mode == 'lr':
+    per_element_cost = T.nnet.binary_crossentropy(p_y_given_x.T, t_y)
+else:  # 'sm'
+    #per_element_cost = -T.log(p_y_given_x)[T.arange(t_y.shape[0]), t_y]  # negative_log_likelihood
+    per_element_cost = T.nnet.categorical_crossentropy(p_y_given_x, t_y)
+cost = T.mean(per_element_cost) + (LAMBDA1 * L1) + (LAMBDA2 * L2)
 
-# trying to explicitly lay this out results in NaNs? but formula the same? (?)
-# there seems to be some numerical stability trick/optimisation that's not coming into play...
-#cost = T.mean((p_y_given_x * T.log(t_y)) + (1-p_y_given_x * T.log(1-t_y)))
-
-params = [t_E, t_hW, t_hB, t_lrW, t_lrB]
+params = [t_E, t_hW, t_hB, t_oW, t_oB]
 gradients = T.grad(cost=cost, wrt=params)
 updates = []
 for param, gradient in zip(params, gradients):
@@ -86,7 +86,7 @@ for param, gradient in zip(params, gradients):
 
 train_model = theano.function(inputs=[t_idxs, t_y], outputs=[], updates=updates)
 check_cost = theano.function(inputs=[t_idxs, t_y], outputs=[cost])
-p_y = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
+model_output = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
 
 #theano.printing.pydotprint(train_model, outfile="model.png")
 #theano.printing.pydotprint(gradients, outfile="gradients.png")
@@ -97,7 +97,13 @@ hidden_weights = MatrixDumper("hidden_weights.tsv", t_hW)
 
 def print_likelihood_of(i, ws):
     idxs = [[token_idx.id_for(w) for w in ws]]  # batch size of 1
-    print "\t".join(map(str, [i, " ".join(ws), p_y(idxs)[0][0][0]]))  # no, i'm not joking :/
+    if opts.mode=='lr':
+        print "%s\t%s %s %s\t%s" % (i, ws[0], ws[1], ws[2], model_output(idxs)[0][0][0])  # no, i'm not joking :/
+    else: # 'sm'
+        distr = model_output(idxs)[0][0]
+        for idx, prob in enumerate(distr):
+            w3 = token_idx.token_for(idx)
+            print "%s\t%s %s %s\t%s" % (i, ws[0], ws[1], w3, prob)
 
 last_batch_start = time.time()
 i = 0  # a counter primarily for dumping weights to file
@@ -125,5 +131,8 @@ for e in range(EPOCHS):
 
 # dump a couple of known cases (see blog post for freq analysis)
 for w1w2 in ['FA', 'CB', 'CC']:
-    for w3 in "ABCDEF":
-        print_likelihood_of(i, w1w2 + w3)
+    if opts.mode=='lr':
+        for w3 in "ABCDEF":
+            print_likelihood_of(i, w1w2 + w3)
+    else: # sm
+        print_likelihood_of(i, w1w2)

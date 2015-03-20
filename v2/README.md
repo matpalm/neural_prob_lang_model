@@ -4,54 +4,7 @@ update of NPLM to play with visualising embeddings.
 
 see <a href="http://matpalm.com/blog/2015/03/15/hallucinating_softmaxs/">http://matpalm.com/blog/2015/03/15/hallucinating_softmaxs/</a>
 
-## build simple embeddings for graph with "equivalent" nodes
-
-consider a sequence generated from a random walk of the following graph. all sequences will be of the form A? B? C? D? A? ...
-
-![](generating_graph.png?raw=true)
-
-```
-$ ./gen_simple_data.py 1000 | ./ngrams.py 3 | shuf > trigrams.txt
-$ head trigrams.txt -n 5
-A2 B1 C2
-A2 B2 C1
-A1 B1 C1
-B1 C2 D1
-A2 B2 C1
-```
-
-train softmax model
-
-```
-# train simple model (cpu faster for this tiny data)
-$ THEANO_FLAGS=device=cpu ./nplm_sm.py --embedding-dim=2 --n-hidden=2 --batch-size=250 --epochs=5000 --trigrams=trigrams.txt
-```
-
-plot embeddings in R
-
-```
-R>
-library(ggplot2)
-df = read.delim("embeddings.tsv", h=T)
-# add a graph_label field, but only populated for final epoch
-#df$label = as.factor(df$idx)
-df$graph_label = df$label                    # copy label to graph label
-df[df$iter!=max(df$iter),]$graph_label = ""  # clear label on all but last iter
-# plot
-ggplot(df, aes(d0, d1)) + 
-  geom_path(aes(size=iter, colour=label)) +
-  geom_text(aes(label=graph_label))
-```
-
-trivial 1d embedding convergence 
-
-![](embeddings.1d.png?raw=true)
-
-trivial 2d embedding convergence
-
-![](embeddings.2d.png?raw=true)
-
-## using a more language-like grammar
+## using a language-like grammar
 
 this time use an erdos renyi random graph as a generating grammar
 
@@ -82,7 +35,7 @@ $ cat trigrams.txt | sush   # alias sush='sort|uniq -c|sort -nr|head'
 train softmax
 
 ```
-$ ./nplm_sm.py --embedding-dim=3 --n-hidden=3 > distributions.txt
+$ ./nplm.py --mode=sm --trigrams=trigrams.txt --embedding-dim=3 --n-hidden=3 > distributions.txt
 ```
 
 learns correct distributions
@@ -120,9 +73,10 @@ D A D 0
 B C A 0
 ```
 
-then train nplm_lr.py 
+then train nplm.py 
 
 ```
+$ ./nplm.py --mode=lr --trigrams=trigrams.with_negs.txt --embedding-dim=3 --n-hidden=3 > distributions.txt
 e 2040 b 188 cost 0.371997481934 last_batch_time 0.262334108353
 1153  F C E  0.858568  # 1.0, freq 1450, rank 1/50 of pos
 1153  F B A  0.584878  # 1.0, freq 16, rank 46/50
@@ -146,3 +100,55 @@ TODOS
 
 * calc diff in params, do for fixed training time budget
 * bigger vocabs
+
+
+
+
+## older stuff, still here for images..
+
+## build simple embeddings for graph with "equivalent" nodes
+
+consider a sequence generated from a random walk of the following graph. all sequences will be of the form A? B? C? D? A? ...
+
+![](generating_graph.png?raw=true)
+
+```
+$ ./gen_simple_data.py 1000 | ./ngrams.py 3 | shuf > trigrams.txt
+$ head trigrams.txt -n 5
+A2 B1 C2
+A2 B2 C1
+A1 B1 C1
+B1 C2 D1
+A2 B2 C1
+```
+
+train softmax model
+
+```
+# train simple model (cpu faster for this tiny data)  NOTE: this example is deprecated and code wasn't ported, see lang stuff below
+$ THEANO_FLAGS=device=cpu ./nplm_sm.py --embedding-dim=2 --n-hidden=2 --batch-size=250 --epochs=5000 --trigrams=trigrams.txt
+```
+
+plot embeddings in R
+
+```
+R>
+library(ggplot2)
+df = read.delim("embeddings.tsv", h=T)
+# add a graph_label field, but only populated for final epoch
+#df$label = as.factor(df$idx)
+df$graph_label = df$label                    # copy label to graph label
+df[df$iter!=max(df$iter),]$graph_label = ""  # clear label on all but last iter
+# plot
+ggplot(df, aes(d0, d1)) + 
+  geom_path(aes(size=iter, colour=label)) +
+  geom_text(aes(label=graph_label))
+```
+
+trivial 1d embedding convergence 
+
+![](embeddings.1d.png?raw=true)
+
+trivial 2d embedding convergence
+
+![](embeddings.2d.png?raw=true)
