@@ -17,6 +17,8 @@ optparser.add_option('--seed', None, dest='seed', type='int', default=None, help
 optparser.add_option('--epochs', None, dest='epochs', type='int', default=20000, help='epochs to run')
 optparser.add_option('--lambda1', None, dest='lambda1', type='float', default=0.0, help='l1 regularisation weight')
 optparser.add_option('--lambda2', None, dest='lambda2', type='float', default=0.0, help='l2 regularisation weight')
+optparser.add_option('--adaptive-learning-rate', None, dest='adaptive_learning_rate_fn', type='string', default="rmsprop", help='adaptive learning rate method')
+optparser.add_option('--learning-rate', None, dest='learning_rate', type='float', default=0.001, help='base learning rate')
 opts, arguments = optparser.parse_args()
 print >>sys.stderr, "options", opts
 if opts.seed is not None:
@@ -78,11 +80,29 @@ else:  # 'sm'
     per_element_cost = T.nnet.categorical_crossentropy(p_y_given_x, t_y)
 cost = T.mean(per_element_cost) + (LAMBDA1 * L1) + (LAMBDA2 * L2)
 
+def vanilla(params, gradients):
+    return [(param, param - opts.learning_rate * gradient) for param, gradient in zip(params, gradients)]
+
+def rmsprop(params, gradients):
+    updates = []
+    for param_t0, gradient in zip(params, gradients):
+        # rmsprop see slide 29 of http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
+        # first the mean_sqr exponential moving average
+        mean_sqr_t0 = theano.shared(np.zeros(param_t0.get_value().shape, dtype=param_t0.get_value().dtype))  # zeros in same shape are param
+        mean_sqr_t1 = 0.9 * mean_sqr_t0 + 0.1 * (gradient**2)
+        updates.append((mean_sqr_t0, mean_sqr_t1))
+        # update param surpressing gradient by this average
+        param_t1 = param_t0 - opts.learning_rate * (gradient / T.sqrt(mean_sqr_t1))
+        updates.append((param_t0, param_t1))
+    return updates
+
+update_fn = globals().get(opts.adaptive_learning_rate_fn)
+if update_fn == None:
+    raise Exception("no update_fn " + opts.adaptive_learning_rate_fn)
+
 params = [t_E, t_hW, t_hB, t_oW, t_oB]
 gradients = T.grad(cost=cost, wrt=params)
-updates = []
-for param, gradient in zip(params, gradients):
-    updates.append((param, param - 0.001 * gradient))  # TODO: seriously need RMSprop, adagrad, whatever
+updates = update_fn(params, gradients)
 
 train_model = theano.function(inputs=[t_idxs, t_y], outputs=[], updates=updates)
 check_cost = theano.function(inputs=[t_idxs, t_y], outputs=[cost])
@@ -92,8 +112,8 @@ model_output = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
 #theano.printing.pydotprint(gradients, outfile="gradients.png")
 
 # debugging wrappers to dump weights over time
-embeddings_dumper = MatrixDumper("embeddings.tsv", t_E, token_idx)
-hidden_weights = MatrixDumper("hidden_weights.tsv", t_hW)
+embeddings_dumper = None  #MatrixDumper("embeddings.tsv", t_E, token_idx)
+hidden_weights = None  #MatrixDumper("hidden_weights.tsv", t_hW)
 
 def print_likelihood_of(i, ws):
     idxs = [[token_idx.id_for(w) for w in ws]]  # batch size of 1
