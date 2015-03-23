@@ -8,8 +8,9 @@ import sys
 optparser = optparse.OptionParser(prog='nplp', version='0.0.1', description='simple neural probabilistic language model')
 optparser.add_option('--seed', None, dest='seed', type='int', default=None, help='rng seed')
 optparser.add_option('--to-dot', action="store_true", dest='to_dot', help='dump dot format and exit')
-optparser.add_option('--er-n', None, dest='er_n', type='int', default=10, help='erdos_renyi n param')
+optparser.add_option('--er-n', None, dest='er_n', type='int', default=10, help='erdos_renyi n param (num nodes)')
 optparser.add_option('--er-p', None, dest='er_p', type='float', default=0.15, help='erdos_renyi p param')
+optparser.add_option('--num-labels', None, dest='num_labels', type='int', default=6, help='number of distinct labels')
 optparser.add_option('--generate', None, dest='gen', type='int', default=10, help='number of sequences to generate')
 opts, arguments = optparser.parse_args()
 
@@ -20,7 +21,10 @@ if opts.seed is not None:
 
 er = nx.erdos_renyi_graph(opts.er_n, opts.er_p, directed=True)
 
-labels = ['A', 'B', 'C', 'D', 'E', 'F']
+if opts.num_labels == 6:
+    labels = ['A', 'B', 'C', 'D', 'E', 'F']  # backwards compat
+else:
+    labels = ["n%s" % i for i in range(opts.num_labels)]
 def label(i):
     return labels[i % len(labels)]
 

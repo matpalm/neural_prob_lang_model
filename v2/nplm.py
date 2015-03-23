@@ -92,7 +92,7 @@ def rmsprop(params, gradients):
         mean_sqr_t1 = 0.9 * mean_sqr_t0 + 0.1 * (gradient**2)
         updates.append((mean_sqr_t0, mean_sqr_t1))
         # update param surpressing gradient by this average
-        param_t1 = param_t0 - opts.learning_rate * (gradient / T.sqrt(mean_sqr_t1))
+        param_t1 = param_t0 - opts.learning_rate * (gradient / T.sqrt(mean_sqr_t1 + 1e-10))
         updates.append((param_t0, param_t1))
     return updates
 
