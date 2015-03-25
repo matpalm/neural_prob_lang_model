@@ -7,7 +7,7 @@ import random, math, time, optparse, sys
 from load_data import load_trigram_data
 from matrix_dumper import MatrixDumper
 
-optparser = optparse.OptionParser(prog='nplp', version='0.0.1', description='simple neural probabilistic language model')
+optparser = optparse.OptionParser(prog='nplm', version='0.0.1', description='simple neural probabilistic language model')
 optparser.add_option('--mode', None, dest='mode', type='string', default="sm", help='top layer mode; sm=softmax, lr=logistic regression')
 optparser.add_option('--trigrams', None, dest='trigrams_file', type='string', default="trigrams.txt", help='trigrams input file')
 optparser.add_option('--batch-size', None, dest='batch_size', type='int', default=100, help='training batch size')
@@ -137,7 +137,7 @@ for e in range(EPOCHS):
         batch_y = y[b*BATCH_SIZE : (b+1)*BATCH_SIZE]
         train_model(batch_idxs, batch_y)
 
-    if e % 100 == 0:
+    if e % 10 == 0:
         # print some stats
         i += 1
         cost = check_cost(batch_idxs, batch_y)        

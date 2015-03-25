@@ -93,15 +93,6 @@ over time (note: includes large y jitter)
 
 interesting that FAF and FAA become so tied
 
-# 
-$ cat *final | awk -F'   ' '{print $2 "\t" substr($2,0,4) "\t" $3}'
-
-TODOS
-
-* calc diff in params, do for fixed training time budget
-* bigger vocabs
-
-
 
 
 ## older stuff, still here for images..
