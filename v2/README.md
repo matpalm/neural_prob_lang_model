@@ -93,7 +93,13 @@ over time (note: includes large y jitter)
 
 interesting that FAF and FAA become so tied
 
+## real text
 
+using 1e6 sentence data, specifically ./sentences_to_embeddables.py --emit=lemma --strip-CD --add-pos-tag --keep-top=50000
+
+```
+time cat sentences.lemma.CD.pos.50K.ssv | ./ngrams.py 3 > sentences.lemma.CD.pos.50K.trigrams
+```
 
 ## older stuff, still here for images..
 

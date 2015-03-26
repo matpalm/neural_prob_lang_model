@@ -2,3 +2,5 @@
 .Rhistory
 embeddings.tsv
 hidden_weights.tsv
+sentences.lemma.CD.pos.50K*
+vocab.tsv

@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import print_function
+
 import theano
 import theano.tensor as T
 import numpy as np
@@ -19,8 +21,12 @@ optparser.add_option('--lambda1', None, dest='lambda1', type='float', default=0.
 optparser.add_option('--lambda2', None, dest='lambda2', type='float', default=0.0, help='l2 regularisation weight')
 optparser.add_option('--adaptive-learning-rate', None, dest='adaptive_learning_rate_fn', type='string', default="rmsprop", help='adaptive learning rate method')
 optparser.add_option('--learning-rate', None, dest='learning_rate', type='float', default=0.001, help='base learning rate')
+optparser.add_option('--cost-progress-freq', None, dest='cost_progress_freq', default=10, type=int, help='how frequently to write cost output (in batchs) 0==never')
+optparser.add_option('--cost-progress-file', None, dest='cost_progress_file', default=None, help='if set write cost progress to this file')
+optparser.add_option('--dump-matrices-freq', None, dest='dump_matrices_freq', default=None, type=int, help='how frequently to dump matrices (in batchs) 0==never')
+
 opts, arguments = optparser.parse_args()
-print >>sys.stderr, "options", opts
+print("options", opts, file=sys.stderr)
 if opts.seed is not None:
     np.random.seed(int(opts.seed))
 if opts.mode not in ['sm', 'lr']:
@@ -30,17 +36,18 @@ if opts.mode not in ['sm', 'lr']:
 # idxs => (w1, w2, w3) for lr; (w1, w2) for sm
 # label y => 1.0 or 0.0 for lr; w3 for sm
 idxs, y, token_idx = load_trigram_data(opts.trigrams_file, opts.mode)
+token_idx.write_to_file("vocab.tsv")
 VOCAB_SIZE = token_idx.seq
 
 # decide batching sizes
 BATCH_SIZE = opts.batch_size
 NUM_BATCHES = int(math.ceil(float(len(idxs)) / BATCH_SIZE))
-print >>sys.stderr, "#egs", len(idxs), "batch_size", BATCH_SIZE, "=> num_batches", NUM_BATCHES
+print("#egs", len(idxs), "batch_size", BATCH_SIZE, "=> num_batches", NUM_BATCHES, file=sys.stderr)
 EPOCHS = opts.epochs
 LAMBDA1, LAMBDA2 = opts.lambda1, opts.lambda2
 
 # embeddings matrix
-E = np.asarray(np.random.randn(VOCAB_SIZE, opts.embedding_dim), dtype='float32')
+E = np.asarray(np.random.randn(VOCAB_SIZE, opts.embedding_dim), dtype='float32')   # orthogonise with U (V?) from np.linalg.svd
 NUM_EMBEDDING_NODES = 3 if opts.mode=='lr' else 2
 # hidden layer weights and bias
 hW = np.asarray(np.random.randn(NUM_EMBEDDING_NODES * opts.embedding_dim, opts.n_hidden), dtype='float32')
@@ -80,8 +87,10 @@ else:  # 'sm'
     per_element_cost = T.nnet.categorical_crossentropy(p_y_given_x, t_y)
 cost = T.mean(per_element_cost) + (LAMBDA1 * L1) + (LAMBDA2 * L2)
 
+learning_rate = theano.shared(np.float32(opts.learning_rate))
+
 def vanilla(params, gradients):
-    return [(param, param - opts.learning_rate * gradient) for param, gradient in zip(params, gradients)]
+    return [(param, param - learning_rate * gradient) for param, gradient in zip(params, gradients)]
 
 def rmsprop(params, gradients):
     updates = []
@@ -92,7 +101,7 @@ def rmsprop(params, gradients):
         mean_sqr_t1 = 0.9 * mean_sqr_t0 + 0.1 * (gradient**2)
         updates.append((mean_sqr_t0, mean_sqr_t1))
         # update param surpressing gradient by this average
-        param_t1 = param_t0 - opts.learning_rate * (gradient / T.sqrt(mean_sqr_t1 + 1e-10))
+        param_t1 = param_t0 - learning_rate * (gradient / T.sqrt(mean_sqr_t1 + 1e-10))
         updates.append((param_t0, param_t1))
     return updates
 
@@ -112,47 +121,60 @@ model_output = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
 #theano.printing.pydotprint(gradients, outfile="gradients.png")
 
 # debugging wrappers to dump weights over time
-embeddings_dumper = None  #MatrixDumper("embeddings.tsv", t_E, token_idx)
+embeddings_dumper = MatrixDumper("embeddings.tsv", t_E, token_idx)
 hidden_weights = None  #MatrixDumper("hidden_weights.tsv", t_hW)
 
 def print_likelihood_of(i, ws):
     idxs = [[token_idx.id_for(w) for w in ws]]  # batch size of 1
     if opts.mode=='lr':
-        print "%s\t%s %s %s\t%s" % (i, ws[0], ws[1], ws[2], model_output(idxs)[0][0][0])  # no, i'm not joking :/
-    else: # 'sm'
+        print("%s\t%s %s %s\t%s" % (i, ws[0], ws[1], ws[2], model_output(idxs)[0][0][0]))  # no, i'm not joking :/
+    else:  # 'sm'
         distr = model_output(idxs)[0][0]
         for idx, prob in enumerate(distr):
             w3 = token_idx.token_for(idx)
-            print "%s\t%s %s %s\t%s" % (i, ws[0], ws[1], w3, prob)
+            print("%s\t%s %s %s\t%s" % (i, ws[0], ws[1], w3, prob))
 
-last_batch_start = time.time()
-i = 0  # a counter primarily for dumping weights to file
+cost_progress_file = None
+if opts.cost_progress_file: 
+    cost_progress_file = open(opts.cost_progress_file, 'w')
+    print("e\tb\tcost\ttime", file=cost_progress_file)
+
+last_time = time.time()
+total_batches_run = 0
 
 for e in range(EPOCHS):
-    # TODO shuffle egs
-
-    # run all batches
     for b in range(NUM_BATCHES):
+
+        # train one batch
         batch_idxs = idxs[b*BATCH_SIZE : (b+1)*BATCH_SIZE]
         batch_y = y[b*BATCH_SIZE : (b+1)*BATCH_SIZE]
         train_model(batch_idxs, batch_y)
 
-    if e % 10 == 0:
-        # print some stats
-        i += 1
-        cost = check_cost(batch_idxs, batch_y)        
-        print >>sys.stderr, "e", e, "i", i, "cost", cost[0], "last_batch_time", time.time() - last_batch_start
-        last_batch_start = time.time()
+        # print some cost stats
+        if total_batches_run % opts.cost_progress_freq == 0:
+            time_since_last = time.time() - last_time
+            cost = check_cost(batch_idxs, batch_y)
+            sys.stderr.write("e:%s/%s b:%s/%s cost:%s last_time:%s                  \r" % (e, EPOCHS, b, NUM_BATCHES, cost[0], time_since_last))
+            if cost_progress_file:
+                print("\t".join(map(str, [e, b, cost[0], time_since_last])), file=cost_progress_file)
+                cost_progress_file.flush()
+            last_time = time.time()
 
         # dump embeddings and weights to file
-        for md in [embeddings_dumper, hidden_weights]:
-            if md is not None:
-                md.dump(e, b, i)    
+        if total_batches_run % opts.dump_matrices_freq == 0:
+            for md in [embeddings_dumper, hidden_weights]:
+                if md is not None:
+                    md.dump(e, b)
+
+        total_batches_run += 1
+
+if cost_progress_file:
+    cost_progress_file.close()
 
 # dump a couple of known cases (see blog post for freq analysis)
-for w1w2 in ['FA', 'CB', 'CC']:
-    if opts.mode=='lr':
-        for w3 in "ABCDEF":
-            print_likelihood_of(i, w1w2 + w3)
-    else: # sm
-        print_likelihood_of(i, w1w2)
+#for w1w2 in ['FA', 'CB', 'CC']:
+#    if opts.mode=='lr':
+#        for w3 in "ABCDEF":
+#            print_likelihood_of(i, w1w2 + w3)
+#    else: # sm
+#        print_likelihood_of(i, w1w2)

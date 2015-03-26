@@ -4,17 +4,18 @@ class MatrixDumper(object):
         self.output = open(filename, 'w')
         self.matrix = matrix
         self.token_idx = token_idx
-        # tab seperated header.
-        columns = ["epoch", "batch", "iter", "idx"]
+        # tab seperated header, first standard fields
+        columns = ["epoch", "batch", "idx"]
         if token_idx:
-            columns.append("label")        
+            columns.append("label")
+        # then d0, d1, etc fields depending on matrix size
         num_matrix_columns = matrix.get_value().shape[1]
         columns += ["d%i" % d for d in range(num_matrix_columns)]
         self.output.write("\t".join(columns) + "\n")
 
-    def dump(self, e, b, i):
+    def dump(self, e, b):
         for idx, embedding in enumerate(self.matrix.get_value()):
-            self.output.write("\t".join(map(str, [e, b, i, idx])))
+            self.output.write("\t".join(map(str, [e, b, idx])))
             if self.token_idx:
                 self.output.write("\t%s" % self.token_idx.idx_token[idx])
             self.output.write("\t" + "\t".join(map(str, embedding)) + "\n")
