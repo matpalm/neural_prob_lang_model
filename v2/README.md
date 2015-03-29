@@ -98,8 +98,21 @@ interesting that FAF and FAA become so tied
 using 1e6 sentence data, specifically ./sentences_to_embeddables.py --emit=lemma --strip-CD --add-pos-tag --keep-top=50000
 
 ```
-time cat sentences.lemma.CD.pos.50K.ssv | ./ngrams.py 3 > sentences.lemma.CD.pos.50K.trigrams
+time cat sentences.lemma.CD.75K.ssv | ./ngrams.py 3 > sentences.lemma.CD.75K.trigrams
 ```
+
+```
+THEANO_FLAGS=device=gpu ./nplm.py --trigrams=/data2/1e6_sentences/sentences.lemma.CD.75K.trigrams \
+ --batch-size=256 --embedding-dim=20 --n-hidden=40 --epochs=100 --adaptive-learning-rate=rmsprop \
+ --cost-progress-freq=100 --dump-matrices-freq=50000 --output_file_prefix=ON2
+```
+
+## tsne projections
+
+$ cat embeddings.tsv | grep -P "^5\t71655" | grep -P "monday|tuesday|wednesday|thursday|friday|saturday|sunday" | ./embeddings_tsne.py > embeddings.dow.2d.tsv
+
+
+
 
 ## older stuff, still here for images..
 
@@ -149,3 +162,7 @@ trivial 1d embedding convergence
 trivial 2d embedding convergence
 
 ![](embeddings.2d.png?raw=true)
+
+
+
+

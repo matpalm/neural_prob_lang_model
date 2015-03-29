@@ -21,8 +21,8 @@ optparser.add_option('--lambda1', None, dest='lambda1', type='float', default=0.
 optparser.add_option('--lambda2', None, dest='lambda2', type='float', default=0.0, help='l2 regularisation weight')
 optparser.add_option('--adaptive-learning-rate', None, dest='adaptive_learning_rate_fn', type='string', default="rmsprop", help='adaptive learning rate method')
 optparser.add_option('--learning-rate', None, dest='learning_rate', type='float', default=0.001, help='base learning rate')
+optparser.add_option('--output-file-prefix', None, dest='output_file_prefix', default="", help='prefix for all output files')
 optparser.add_option('--cost-progress-freq', None, dest='cost_progress_freq', default=10, type=int, help='how frequently to write cost output (in batchs) 0==never')
-optparser.add_option('--cost-progress-file', None, dest='cost_progress_file', default=None, help='if set write cost progress to this file')
 optparser.add_option('--dump-matrices-freq', None, dest='dump_matrices_freq', default=None, type=int, help='how frequently to dump matrices (in batchs) 0==never')
 
 opts, arguments = optparser.parse_args()
@@ -121,7 +121,7 @@ model_output = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
 #theano.printing.pydotprint(gradients, outfile="gradients.png")
 
 # debugging wrappers to dump weights over time
-embeddings_dumper = MatrixDumper("embeddings.tsv", t_E, token_idx)
+embeddings_dumper = MatrixDumper(opts.output_file_prefix + "_embeddings.tsv", t_E, token_idx)
 hidden_weights = None  #MatrixDumper("hidden_weights.tsv", t_hW)
 
 def print_likelihood_of(i, ws):
@@ -134,10 +134,8 @@ def print_likelihood_of(i, ws):
             w3 = token_idx.token_for(idx)
             print("%s\t%s %s %s\t%s" % (i, ws[0], ws[1], w3, prob))
 
-cost_progress_file = None
-if opts.cost_progress_file: 
-    cost_progress_file = open(opts.cost_progress_file, 'w')
-    print("e\tb\tcost\ttime", file=cost_progress_file)
+cost_progress_file = open(opts.output_file_prefix + "_cost.tsv", 'w')  # move into cost_dumper
+print("e\tb\tcost\ttime", file=cost_progress_file)
 
 last_time = time.time()
 total_batches_run = 0
@@ -155,9 +153,8 @@ for e in range(EPOCHS):
             time_since_last = time.time() - last_time
             cost = check_cost(batch_idxs, batch_y)
             sys.stderr.write("e:%s/%s b:%s/%s cost:%s last_time:%s                  \r" % (e, EPOCHS, b, NUM_BATCHES, cost[0], time_since_last))
-            if cost_progress_file:
-                print("\t".join(map(str, [e, b, cost[0], time_since_last])), file=cost_progress_file)
-                cost_progress_file.flush()
+            print("\t".join(map(str, [e, b, cost[0], time_since_last])), file=cost_progress_file)
+            cost_progress_file.flush()
             last_time = time.time()
 
         # dump embeddings and weights to file
@@ -167,9 +164,6 @@ for e in range(EPOCHS):
                     md.dump(e, b)
 
         total_batches_run += 1
-
-if cost_progress_file:
-    cost_progress_file.close()
 
 # dump a couple of known cases (see blog post for freq analysis)
 #for w1w2 in ['FA', 'CB', 'CC']:

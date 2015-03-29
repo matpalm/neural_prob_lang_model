@@ -1,3 +1,5 @@
+*tsv
+*ssv
 .RData
 .Rhistory
 embeddings.tsv
