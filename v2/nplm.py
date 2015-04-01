@@ -5,9 +5,9 @@ import theano
 import theano.tensor as T
 import numpy as np
 import random, math, time, optparse, sys
-
+from frequency_gate import FrequencyGate
 from load_data import load_trigram_data
-from matrix_dumper import MatrixDumper
+from checkpointer import Checkpointer
 
 optparser = optparse.OptionParser(prog='nplm', version='0.0.1', description='simple neural probabilistic language model')
 optparser.add_option('--mode', None, dest='mode', type='string', default="sm", help='top layer mode; sm=softmax, lr=logistic regression')
@@ -21,10 +21,12 @@ optparser.add_option('--lambda1', None, dest='lambda1', type='float', default=0.
 optparser.add_option('--lambda2', None, dest='lambda2', type='float', default=0.0, help='l2 regularisation weight')
 optparser.add_option('--adaptive-learning-rate', None, dest='adaptive_learning_rate_fn', type='string', default="rmsprop", help='adaptive learning rate method')
 optparser.add_option('--learning-rate', None, dest='learning_rate', type='float', default=0.001, help='base learning rate')
-optparser.add_option('--output-file-prefix', None, dest='output_file_prefix', default="", help='prefix for all output files')
-optparser.add_option('--cost-progress-freq', None, dest='cost_progress_freq', default=10, type=int, help='how frequently to write cost output (in batchs) 0==never')
-optparser.add_option('--dump-matrices-freq', None, dest='dump_matrices_freq', default=None, type=int, help='how frequently to dump matrices (in batchs) 0==never')
+optparser.add_option('--output-prefix', None, dest='output_prefix', default=None, help='prefix for output files, including check points and costs stats.')
+optparser.add_option('--checkpoint-freq', None, dest='checkpoint_freq', default=None, type=int, help='how frequently to dump model checkpoints (in secs) dft never')
+optparser.add_option('--cost-progress-freq', None, dest='cost_progress_freq', default=10, type=int, 
+                     help='how frequently to output cost output (in secs). always to screen, sometimes to file (if output-prefix) set')
 
+# TODO: change _freq to be based on last time
 opts, arguments = optparser.parse_args()
 print("options", opts, file=sys.stderr)
 if opts.seed is not None:
@@ -32,11 +34,16 @@ if opts.seed is not None:
 if opts.mode not in ['sm', 'lr']:
     raise Exception("mode must be one of 'sm' or 'lr' not '%s'" % opts.mode)
 
+# create some timing gates for dumping checkpoints and costs
+checkpointer_gate = FrequencyGate(opts.checkpoint_freq) if opts.checkpoint_freq else None
+dump_cost_gate = FrequencyGate(opts.cost_progress_freq)
+
 # slurp in training data, converting from "C A B" to idx "0 1 2" and storing in idxs
 # idxs => (w1, w2, w3) for lr; (w1, w2) for sm
 # label y => 1.0 or 0.0 for lr; w3 for sm
 idxs, y, token_idx = load_trigram_data(opts.trigrams_file, opts.mode)
-token_idx.write_to_file("vocab.tsv")
+if opts.output_prefix is not None:
+    token_idx.write_to_file(opts.output_prefix + "_vocab.tsv")
 VOCAB_SIZE = token_idx.seq
 
 # decide batching sizes
@@ -46,16 +53,29 @@ print("#egs", len(idxs), "batch_size", BATCH_SIZE, "=> num_batches", NUM_BATCHES
 EPOCHS = opts.epochs
 LAMBDA1, LAMBDA2 = opts.lambda1, opts.lambda2
 
-# embeddings matrix
-E = np.asarray(np.random.randn(VOCAB_SIZE, opts.embedding_dim), dtype='float32')   # orthogonise with U (V?) from np.linalg.svd
 NUM_EMBEDDING_NODES = 3 if opts.mode=='lr' else 2
-# hidden layer weights and bias
-hW = np.asarray(np.random.randn(NUM_EMBEDDING_NODES * opts.embedding_dim, opts.n_hidden), dtype='float32')
-hB = np.zeros(opts.n_hidden, dtype='float32')
-# output weights and bias
 NUM_OUTPUT_NODES = 1 if opts.mode=='lr' else VOCAB_SIZE
-oW = np.asarray(np.random.randn(opts.n_hidden, NUM_OUTPUT_NODES), dtype='float32')
-oB = np.zeros(NUM_OUTPUT_NODES, dtype='float32')
+
+# load checkpoints, if configured to, and we have any
+checkpointer = None
+loaded = False
+if (opts.output_prefix is not None):
+    checkpointer = Checkpointer(opts.output_prefix, "E hW hB oW oB")
+    latest = checkpointer.latest_checkpoint()
+    if latest:
+        print("loading checkpoints [%s] [%d]" % (opts.output_prefix, latest), file=sys.stderr)
+        E, hW, hB, oW, oB = checkpointer.load_checkpoint(latest)
+        loaded = True
+if not loaded:  
+    # random init start
+    # embeddings
+    E = np.asarray(np.random.randn(VOCAB_SIZE, opts.embedding_dim), dtype='float32')   # orthogonise with U (V?) from np.linalg.svd
+    # hidden weights and bias
+    hW = np.asarray(np.random.randn(NUM_EMBEDDING_NODES * opts.embedding_dim, opts.n_hidden), dtype='float32')
+    hB = np.zeros(opts.n_hidden, dtype='float32')
+    # output weights and bias
+    oW = np.asarray(np.random.randn(opts.n_hidden, NUM_OUTPUT_NODES), dtype='float32')
+    oB = np.zeros(NUM_OUTPUT_NODES, dtype='float32')
 
 # build up network
 t_idxs = T.imatrix(name='idxs')  # input egs
@@ -97,6 +117,7 @@ def rmsprop(params, gradients):
     for param_t0, gradient in zip(params, gradients):
         # rmsprop see slide 29 of http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
         # first the mean_sqr exponential moving average
+        # TODO: hmmm. current checkpointer doesn't support this at all :(
         mean_sqr_t0 = theano.shared(np.zeros(param_t0.get_value().shape, dtype=param_t0.get_value().dtype))  # zeros in same shape are param
         mean_sqr_t1 = 0.9 * mean_sqr_t0 + 0.1 * (gradient**2)
         updates.append((mean_sqr_t0, mean_sqr_t1))
@@ -120,10 +141,6 @@ model_output = theano.function(inputs=[t_idxs], outputs=[p_y_given_x])
 #theano.printing.pydotprint(train_model, outfile="model.png")
 #theano.printing.pydotprint(gradients, outfile="gradients.png")
 
-# debugging wrappers to dump weights over time
-embeddings_dumper = MatrixDumper(opts.output_file_prefix + "_embeddings.tsv", t_E, token_idx)
-hidden_weights = None  #MatrixDumper("hidden_weights.tsv", t_hW)
-
 def print_likelihood_of(i, ws):
     idxs = [[token_idx.id_for(w) for w in ws]]  # batch size of 1
     if opts.mode=='lr':
@@ -134,10 +151,12 @@ def print_likelihood_of(i, ws):
             w3 = token_idx.token_for(idx)
             print("%s\t%s %s %s\t%s" % (i, ws[0], ws[1], w3, prob))
 
-cost_progress_file = open(opts.output_file_prefix + "_cost.tsv", 'w')  # move into cost_dumper
-print("e\tb\tcost\ttime", file=cost_progress_file)
+# decide if we're going to dump cost progress
+cost_progress_file = None
+if opts.output_prefix is not None:
+    cost_progress_file = open(opts.output_prefix + "_cost.tsv", 'w')
+    print("e\tb\ttime\tcost", file=cost_progress_file)
 
-last_time = time.time()
 total_batches_run = 0
 
 for e in range(EPOCHS):
@@ -149,26 +168,19 @@ for e in range(EPOCHS):
         train_model(batch_idxs, batch_y)
 
         # print some cost stats
-        if total_batches_run % opts.cost_progress_freq == 0:
-            time_since_last = time.time() - last_time
+        if dump_cost_gate.open():
             cost = check_cost(batch_idxs, batch_y)
-            sys.stderr.write("e:%s/%s b:%s/%s cost:%s last_time:%s                  \r" % (e, EPOCHS, b, NUM_BATCHES, cost[0], time_since_last))
-            print("\t".join(map(str, [e, b, cost[0], time_since_last])), file=cost_progress_file)
-            cost_progress_file.flush()
-            last_time = time.time()
+            sys.stderr.write("e:%s/%s b:%s/%s cost:%s                   \r" % (e, EPOCHS, b, NUM_BATCHES, cost[0]))
+            if cost_progress_file is not None:
+                print("\t".join(map(str, [e, b, int(time.time()), cost[0]])), file=cost_progress_file)
+                cost_progress_file.flush()
 
-        # dump embeddings and weights to file
-        if total_batches_run % opts.dump_matrices_freq == 0:
-            for md in [embeddings_dumper, hidden_weights]:
-                if md is not None:
-                    md.dump(e, b)
+        # dump checkpoints
+        if (checkpointer is not None) and checkpointer_gate.open():
+            checkpointer.dump_checkpoint([v.get_value() for v in [t_E, t_hW, t_hB, t_oW, t_oB]])
 
         total_batches_run += 1
 
-# dump a couple of known cases (see blog post for freq analysis)
-#for w1w2 in ['FA', 'CB', 'CC']:
-#    if opts.mode=='lr':
-#        for w3 in "ABCDEF":
-#            print_likelihood_of(i, w1w2 + w3)
-#    else: # sm
-#        print_likelihood_of(i, w1w2)
+# always dump a final checkpoint
+if checkpointer is not None:
+    checkpointer.dump_checkpoint([v.get_value() for v in [t_E, t_hW, t_hB, t_oW, t_oB]])
