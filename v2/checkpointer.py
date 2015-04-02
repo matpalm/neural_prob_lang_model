@@ -15,8 +15,8 @@ class Checkpointer(object):
 
     # TODO: is there any way to get name of variable (for filename) from a reference?
     #       would like var_names to be automatic...
-    def __init__(self, prefix, space_seperated_list_of_var_names):
-        self.prefix = prefix + "_ckpt"
+    def __init__(self, working_dir, space_seperated_list_of_var_names):
+        self.prefix = working_dir + "/ckpt"
         self.var_names = space_seperated_list_of_var_names.split()
     
     def latest_checkpoint(self):

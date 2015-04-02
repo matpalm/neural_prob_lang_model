@@ -4,7 +4,7 @@ from __future__ import print_function
 import theano
 import theano.tensor as T
 import numpy as np
-import random, math, time, optparse, sys
+import random, math, time, optparse, sys, os
 from frequency_gate import FrequencyGate
 from load_data import load_trigram_data
 from checkpointer import Checkpointer
@@ -21,18 +21,25 @@ optparser.add_option('--lambda1', None, dest='lambda1', type='float', default=0.
 optparser.add_option('--lambda2', None, dest='lambda2', type='float', default=0.0, help='l2 regularisation weight')
 optparser.add_option('--adaptive-learning-rate', None, dest='adaptive_learning_rate_fn', type='string', default="rmsprop", help='adaptive learning rate method')
 optparser.add_option('--learning-rate', None, dest='learning_rate', type='float', default=0.001, help='base learning rate')
-optparser.add_option('--output-prefix', None, dest='output_prefix', default=None, help='prefix for output files, including check points and costs stats.')
+optparser.add_option('--output-dir', None, dest='output_dir', default=None, help='working directory for output files, including check points and costs stats.')
 optparser.add_option('--checkpoint-freq', None, dest='checkpoint_freq', default=None, type=int, help='how frequently to dump model checkpoints (in secs) dft never')
 optparser.add_option('--cost-progress-freq', None, dest='cost_progress_freq', default=10, type=int, 
                      help='how frequently to output cost output (in secs). always to screen, sometimes to file (if output-prefix) set')
-
-# TODO: change _freq to be based on last time
 opts, arguments = optparser.parse_args()
 print("options", opts, file=sys.stderr)
+
 if opts.seed is not None:
     np.random.seed(int(opts.seed))
+
 if opts.mode not in ['sm', 'lr']:
     raise Exception("mode must be one of 'sm' or 'lr' not '%s'" % opts.mode)
+
+# create output dir if requested (and write options to a file)
+if opts.output_dir is not None:
+    if not os.path.exists(opts.output_dir):
+        os.makedirs(opts.output_dir)
+    with open(opts.output_dir + "/options.json", 'w') as f:
+        f.write(str(opts))
 
 # create some timing gates for dumping checkpoints and costs
 checkpointer_gate = FrequencyGate(opts.checkpoint_freq) if opts.checkpoint_freq else None
@@ -42,8 +49,8 @@ dump_cost_gate = FrequencyGate(opts.cost_progress_freq)
 # idxs => (w1, w2, w3) for lr; (w1, w2) for sm
 # label y => 1.0 or 0.0 for lr; w3 for sm
 idxs, y, token_idx = load_trigram_data(opts.trigrams_file, opts.mode)
-if opts.output_prefix is not None:
-    token_idx.write_to_file(opts.output_prefix + "_vocab.tsv")
+if opts.output_dir is not None:
+   token_idx.write_to_file(opts.output_dir + "/vocab.tsv")
 VOCAB_SIZE = token_idx.seq
 
 # decide batching sizes
@@ -56,14 +63,20 @@ LAMBDA1, LAMBDA2 = opts.lambda1, opts.lambda2
 NUM_EMBEDDING_NODES = 3 if opts.mode=='lr' else 2
 NUM_OUTPUT_NODES = 1 if opts.mode=='lr' else VOCAB_SIZE
 
+# decide if we're going to dump cost progress
+cost_progress_file = None
+if opts.output_dir is not None:
+    cost_progress_file = open("%s/cost.%d.tsv" % (opts.output_dir, int(time.time())), 'w')
+    print("e\tb\ttime\tcost", file=cost_progress_file)
+
 # load checkpoints, if configured to, and we have any
 checkpointer = None
 loaded = False
-if (opts.output_prefix is not None):
-    checkpointer = Checkpointer(opts.output_prefix, "E hW hB oW oB")
+if (opts.output_dir is not None):
+    checkpointer = Checkpointer(opts.output_dir, "E hW hB oW oB")
     latest = checkpointer.latest_checkpoint()
     if latest:
-        print("loading checkpoints [%s] [%d]" % (opts.output_prefix, latest), file=sys.stderr)
+        print("loading checkpoints [%s] [%d]" % (opts.output_dir, latest), file=sys.stderr)
         E, hW, hB, oW, oB = checkpointer.load_checkpoint(latest)
         loaded = True
 if not loaded:  
@@ -150,12 +163,6 @@ def print_likelihood_of(i, ws):
         for idx, prob in enumerate(distr):
             w3 = token_idx.token_for(idx)
             print("%s\t%s %s %s\t%s" % (i, ws[0], ws[1], w3, prob))
-
-# decide if we're going to dump cost progress
-cost_progress_file = None
-if opts.output_prefix is not None:
-    cost_progress_file = open(opts.output_prefix + "_cost.tsv", 'w')
-    print("e\tb\ttime\tcost", file=cost_progress_file)
 
 total_batches_run = 0
 
