@@ -4,7 +4,7 @@ from __future__ import print_function
 import theano
 import theano.tensor as T
 import numpy as np
-import random, math, time, optparse, sys, os
+import random, math, time, optparse, sys, os, signal
 from frequency_gate import FrequencyGate
 from load_data import load_trigram_data
 from checkpointer import Checkpointer
@@ -165,6 +165,14 @@ def print_likelihood_of(i, ws):
             print("%s\t%s %s %s\t%s" % (i, ws[0], ws[1], w3, prob))
 
 total_batches_run = 0
+
+# add a sigint hook to dump embeddings
+def dump_embeddings(signal, frame):
+    print("caught sigint, dumping checkpoint", file=sys.stderr)
+    if checkpointer is not None:
+        checkpointer.dump_checkpoint([v.get_value() for v in [t_E, t_hW, t_hB, t_oW, t_oB]])
+    sys.exit(0)
+signal.signal(signal.SIGINT, dump_embeddings)
 
 for e in range(EPOCHS):
     for b in range(NUM_BATCHES):
