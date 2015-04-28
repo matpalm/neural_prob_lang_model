@@ -2,7 +2,7 @@
 
 update of NPLM to play with visualising embeddings.
 
-see <a href="http://matpalm.com/blog/2015/03/15/hallucinating_softmaxs/">http://matpalm.com/blog/2015/03/15/hallucinating_softmaxs/</a>
+see <a href="http://matpalm.com/blog/2015/03/15/hallucinating_softmaxs/">http://matpalm.com/blog/2015/03/15/hallucinating_softmaxs/</a> for details
 
 ## using a language-like grammar
 
@@ -124,8 +124,6 @@ e b    time	cost
 
 checking convergence of a specific embedding
 
-( 'idx' is token's idx in vocab, 'x_l_dist' is euclidean distance since last record, 'x_f_dist' is euclidean distance since first record)
-
 ```
 $ checkpoint_convergence.py --files=ckpt.*.E --tokens=the --vocab=vocab.tsv | head -n5
 ckpt_time		    idx		     token	  x_l_dist	    x_f_dist
@@ -134,6 +132,8 @@ ckpt_time		    idx		     token	  x_l_dist	    x_f_dist
 1427960247		    1		     the	  25.908997	    31.671051
 1427962047		    1		     the	  20.501554	    35.187523
 ```
+
+( 'idx' is token's idx in vocab, 'x_l_dist' is euclidean distance since last record, 'x_f_dist' is euclidean distance since first record )
 
 ## tsne projections
 
