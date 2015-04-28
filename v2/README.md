@@ -135,21 +135,21 @@ ckpt_time		    idx		     token	  x_l_dist	    x_f_dist
 1427962047		    1		     the	  20.501554	    35.187523
 ```
 
-
-
-
-
-
 ## tsne projections
 
-$ cat embeddings.tsv | grep -P "^5\t71655" | grep -P "monday|tuesday|wednesday|thursday|friday|saturday|sunday" | ./embeddings_tsne.py > embeddings.dow.2d.tsv
-
+```
+$ cat embeddings.tsv \
+ | grep -P "^5\t71655" \
+ | grep -P "monday|tuesday|wednesday|thursday|friday|saturday|sunday" \
+ | ./embeddings_tsne.py \
+ > embeddings.dow.2d.tsv
+```
 
 
 
 ## older stuff, still here for images..
 
-## build simple embeddings for graph with "equivalent" nodes
+build simple embeddings for graph with "equivalent" nodes
 
 consider a sequence generated from a random walk of the following graph. all sequences will be of the form A? B? C? D? A? ...
 
