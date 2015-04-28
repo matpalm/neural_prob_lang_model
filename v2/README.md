@@ -97,15 +97,48 @@ interesting that FAF and FAA become so tied
 
 using 1e6 sentence data, specifically ./sentences_to_embeddables.py --emit=lemma --strip-CD --add-pos-tag --keep-top=50000
 
+some data prep
+
 ```
 time cat sentences.lemma.CD.75K.ssv | ./ngrams.py 3 > sentences.lemma.CD.75K.trigrams
 ```
 
+training the model
+
 ```
 THEANO_FLAGS=device=gpu ./nplm.py --trigrams=/data2/1e6_sentences/sentences.lemma.CD.75K.trigrams \
  --batch-size=256 --embedding-dim=20 --n-hidden=40 --epochs=100 --adaptive-learning-rate=rmsprop \
- --cost-progress-freq=100 --dump-matrices-freq=50000 --output_file_prefix=ON2
+ --cost-progress-freq=100 --checkpoint-freq=3600 --output-dir=/data/nplm/exp7
 ```
+
+checking cost convergence rate
+
+```
+$ head -n5 cost.1427953157.tsv
+e b    time	cost
+0 0    1427953159	19.4776039124
+0 116  1427953169	4.84544467926
+0 233  1427953179	4.22876739502
+0 350  1427953189	3.90905690193
+```
+
+checking convergence of a specific embedding
+
+( 'idx' is token's idx in vocab, 'x_l_dist' is euclidean distance since last record, 'x_f_dist' is euclidean distance since first record)
+
+```
+$ checkpoint_convergence.py --files=ckpt.*.E --tokens=the --vocab=vocab.tsv | head -n5
+ckpt_time		    idx		     token	  x_l_dist	    x_f_dist
+1427956647		    1		     the	  20.764961	    20.764961
+1427958447		    1		     the	  20.094215	    25.937727
+1427960247		    1		     the	  25.908997	    31.671051
+1427962047		    1		     the	  20.501554	    35.187523
+```
+
+
+
+
+
 
 ## tsne projections
 

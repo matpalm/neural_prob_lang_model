@@ -1,34 +1,7 @@
 from __future__ import print_function
 import sys
 import numpy as np
-
-class TokenIdx(object):  # todo: is there nothing like this in scipy/numpy ? hmm :/
-
-    def __init__(self):
-        self.token_idx = {}
-        self.idx_token = {}
-        self.seq = 0
-
-    def id_for(self, token):
-        if token in self.token_idx:
-            return self.token_idx[token]
-        else:
-            self.token_idx[token] = self.seq
-            self.idx_token[self.seq] = token
-            self.seq += 1
-            return self.seq - 1
-
-    def token_for(self, idx):
-        return self.idx_token[idx]
-
-    def labels(self):
-        return [self.idx_token[i] for i in range(self.seq)]
-
-    def write_to_file(self, filename):
-        with open(filename, 'w') as f:
-            for token, idx in self.token_idx.iteritems():
-                print("%s\t%s" % (token, idx), file=f)
-
+from token_idx import TokenIdx
 
 def load_trigram_data(filename, mode):
     token_idx = TokenIdx()
