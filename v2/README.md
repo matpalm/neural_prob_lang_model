@@ -22,7 +22,7 @@ A A
 E D C
 E A A
 
-$ ./gen_random_data.py --seed=5 --er-n=15 --gen=1000 | ./ngrams.py 3 > trigrams.txt
+$ ./gen_random_data.py --seed=5 --er-n=15 --gen=1000 | ./ngrams.py 3 | shuf > trigrams.txt
 
 $ cat trigrams.txt | sush   # alias sush='sort|uniq -c|sort -nr|head'
     392 F A A
@@ -100,7 +100,7 @@ using 1e6 sentence data, specifically ./sentences_to_embeddables.py --emit=lemma
 some data prep
 
 ```
-time cat sentences.lemma.CD.75K.ssv | ./ngrams.py 3 > sentences.lemma.CD.75K.trigrams
+time cat sentences.lemma.CD.75K.ssv | ./ngrams.py 3 | shuf > sentences.lemma.CD.75K.trigrams
 ```
 
 training the model
@@ -144,8 +144,6 @@ $ cat embeddings.tsv \
  | ./embeddings_tsne.py \
  > embeddings.dow.2d.tsv
 ```
-
-
 
 ## older stuff, still here for images..
 

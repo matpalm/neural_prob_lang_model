@@ -9,6 +9,9 @@ class TokenIdx(object):  # todo: is there nothing like this in scipy/numpy ? hmm
         self.idx_token = {}
         self.seq = 0
 
+    def id_exists_for(self, token):
+        return token in self.token_idx
+
     def id_for(self, token):
         if token in self.token_idx:
             return self.token_idx[token]
