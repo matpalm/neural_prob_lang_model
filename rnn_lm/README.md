@@ -81,16 +81,16 @@ simple as you can RNN.
 
 ```
 $ ./simple_rnn_model.py training test
-epoch 0 min, mean, max perplexity 2.569 3.433 5.408 took 0.998 sec
-epoch 1 min, mean, max perplexity 2.029 2.652 4.381 took 1.006 sec
-epoch 2 min, mean, max perplexity 1.826 2.341 3.825 took 1.010 sec
-epoch 3 min, mean, max perplexity 1.734 2.155 3.451 took 1.008 sec
-epoch 4 min, mean, max perplexity 1.693 2.030 3.171 took 1.007 sec
-epoch 5 min, mean, max perplexity 1.648 1.938 2.948 took 1.009 sec
-epoch 6 min, mean, max perplexity 1.614 1.862 2.774 took 1.009 sec
-epoch 7 min, mean, max perplexity 1.566 1.792 2.627 took 1.012 sec
-epoch 8 min, mean, max perplexity 1.508 1.732 2.474 took 1.010 sec
-epoch 9 min, mean, max perplexity 1.470 1.686 2.338 took 1.010 sec
+epoch 0 min, mean, max perplexity 3.288 4.168 6.284 took 0.993 sec
+epoch 1 min, mean, max perplexity 2.359 3.086 5.311 took 0.990 sec
+epoch 2 min, mean, max perplexity 1.995 2.601 4.462 took 0.990 sec
+epoch 3 min, mean, max perplexity 1.792 2.294 3.686 took 0.995 sec
+epoch 4 min, mean, max perplexity 1.658 2.095 3.125 took 0.994 sec
+epoch 5 min, mean, max perplexity 1.564 1.961 2.755 took 0.995 sec
+epoch 6 min, mean, max perplexity 1.509 1.866 2.542 took 0.994 sec
+epoch 7 min, mean, max perplexity 1.477 1.793 2.402 took 0.994 sec
+epoch 8 min, mean, max perplexity 1.458 1.737 2.302 took 0.993 sec
+epoch 9 min, mean, max perplexity 1.446 1.693 2.228 took 0.993 sec
 ```
 
 

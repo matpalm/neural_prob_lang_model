@@ -32,8 +32,8 @@ n_hidden = 10
 t_x = T.ivector('x')  # eg s A B A D   for sequence A B A D
 t_y = T.ivector('y')  # eg A B A D /s  for sequence A B A D
 
-# initial hidden state for each sequence
-t_h0 = T.vector("h0", dtype='float32')
+# initial hidden state for each sequence. always zero so just stored as shared.
+t_h0 = theano.shared(np.zeros(n_hidden, dtype='float32'), name='h0', borrow=True)
 
 # learnt weights. init for now with simple randn.
 # TODO: orthogonalize? or just identity (le paper)
@@ -71,21 +71,16 @@ updates = []
 for param, gradient in zip(params, gradients):
     updates.append((param, param - 0.05 * gradient))
 
-# initial hidden state is 0 for all sequences
-h0_zeros = (t_h0, np.zeros(n_hidden, dtype='float32'))
-
 print "compiling"
 
 # compile function for training; ie with backprop updates
 train_fn = theano.function(inputs=[t_x, t_y],
                            outputs=[],
-                           updates=updates,
-                           givens=[h0_zeros])
+                           updates=updates)
 
 # compile function to emit predictions
 predict_fn = theano.function(inputs=[t_x],
-                             outputs=t_y_softmax,  # full distribution
-                             givens=[h0_zeros])
+                             outputs=t_y_softmax)  # full distribution
 
 
 # do 10 epochs
