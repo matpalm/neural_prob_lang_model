@@ -10,4 +10,4 @@ v2 : first pass simple rewrite, poking around at low d embeddings on trivial seq
 
 # rnn_lm
 
-trivial hacking of rnn lang models with a focus on investigating embedding convergence
+trivial hacking of rnn lang models with a focus on attention
