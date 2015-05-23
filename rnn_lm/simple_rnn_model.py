@@ -2,6 +2,7 @@
 
 # simplest-as-we-can rnn model
 # - no gating within unit at all
+# - no (other) protection against exploding or vanishing gradients
 # - no adaptive learning rates / schedules, just fixed rate
 # - no batching, train one example at a time.
 # - trivial randn weight init
