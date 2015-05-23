@@ -52,17 +52,13 @@ def recurrent_step(x_t, h_t0):
     # calc output; softmax over output weights dot hidden state
     y_t = T.flatten(T.nnet.softmax(T.dot(t_Wy, h_t)), 1)
 
-    # calc argmax now for performance reasons 
-    # (hellish slow to calc this outside scan :/)
-    y_t_argmax = T.argmax(y_t)
-
     # return what we want to have per output step
-    return [h_t, y_t, y_t_argmax]
+    return [h_t, y_t]
 
 # define the recurrence
-[h_ts, t_y_softmax, t_y_argmax], _ = theano.scan(fn=recurrent_step, 
-                                                 sequences=[t_x],
-                                                 outputs_info=[t_h0, None, None])
+[h_ts, t_y_softmax], _ = theano.scan(fn=recurrent_step,
+                                     sequences=[t_x],
+                                     outputs_info=[t_h0, None])
 
 # loss is just cross entropy of the softmax output compared to the target
 cross_entropy = T.mean(T.nnet.categorical_crossentropy(t_y_softmax, t_y))
@@ -85,18 +81,10 @@ train_fn = theano.function(inputs=[t_x, t_y],
                            updates=updates,
                            givens=[h0_zeros])
 
-# compile function for validation, ie calc cost (wrt target) but no backprop
-#validation_fn = theano.function(inputs=[t_x, t_y],
-#                                outputs=cross_entropy,
-#                                givens=[h0_zeros])
-
-# compile function to emit predictions with cost
-predict_fn = theano.function(inputs=[t_x, t_y],
-                             outputs=[t_y_softmax,     # full distribution
-                                      t_y_argmax,      # explicit argmax
-                                      cross_entropy],  # example cost  
+# compile function to emit predictions
+predict_fn = theano.function(inputs=[t_x],
+                             outputs=t_y_softmax,  # full distribution
                              givens=[h0_zeros])
-
 
 
 # do 10 epochs
@@ -113,8 +101,8 @@ for epoch in range(10):
     for test_eg in test:
         probabilities = []
         x, y = test_eg[:-1], test_eg[1:]
-        y_softmaxs, y_argmaxs, cost = predict_fn(x, y)
-        for y_true_i, y_softmax, _y_predicted_i in zip(y, y_softmaxs, y_argmaxs):
+        y_softmaxs = predict_fn(x)
+        for y_true_i, y_softmax in zip(y, y_softmaxs):
             y_true_confidence = y_softmax[y_true_i]
             probabilities.append(y_true_confidence)
         perplexities.append(perplexity_of_sequence(probabilities))
