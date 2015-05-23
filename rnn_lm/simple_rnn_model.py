@@ -28,8 +28,8 @@ n_in = vocab.num_entries()
 n_hidden = 10
  
 # t_x input and t_y output sequence
-t_x = T.ivector('x')  # eg 0 A B A  for sequence A B A D
-t_y = T.ivector('y')  # eg A B A D  for sequence A B A D
+t_x = T.ivector('x')  # eg s A B A D   for sequence A B A D
+t_y = T.ivector('y')  # eg A B A D /s  for sequence A B A D
 
 # initial hidden state for each sequence
 t_h0 = T.vector("h0", dtype='float32')
