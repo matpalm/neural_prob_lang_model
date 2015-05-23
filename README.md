@@ -6,7 +6,7 @@ v0 : the original old version (2 years old now)
 
 v2 : first pass simple rewrite, poking around at low d embeddings on trivial sequence problem
 
-![embeddings](v0/embeddings.png?raw=true "embeddings")
+![embeddings](nplm/v0/embeddings.png?raw=true "embeddings")
 
 # rnn_lm
 
