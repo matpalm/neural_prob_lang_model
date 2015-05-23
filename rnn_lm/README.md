@@ -38,24 +38,59 @@ $ ./generate.py 100000 | perl -ne'print length($_)."\n";' | histogram.py
 
 ## trivial models
 
+### sanity check models
+
+mainly included as a sanity check of perplexity range
+
 ```
-$ ./uniform_model.py training test
+# just assume P(w) is uniform (grammar has 7 items)
+$ ./uniform_model.py training test  
 min, mean, max perplexity 7.0 7.0 7.0
+
+# perfect model predicts every transistion perfectly
+$ ./perfect_model.py training test  
+min, mean, max perplexity 1.0 1.0 1.0
 ```
+
+### unigram model
+
+P(w_{n} | w_{n-1})
 
 ```
 $ ./unigram_model.py training test
 min, mean, max perplexity 5.65320988827 6.58426607105 8.0107271951
 ```
 
+### bigram model
+
+P(w_{n} | w_{n-1}, W_{n-2})
+
 ```
 $ ./bigram_model.py training test
 min, mean, max perplexity 3.18062061871 3.54441314096 4.09765369567
 ```
 
+### super dead simple rnn
+
+simple as you can RNN.
+
+* no gating within unit at all
+* no adaptive learning rates / schedules, just fixed rate
+* no batching, train one example at a time.
+* trivial randn weight init
+
 ```
-# just for sanity...
-$ ./perfect_model.py training test
-min, mean, max perplexity 1.0 1.0 1.0
+$ ./simple_rnn_model.py training test
+epoch 0 min, mean, max perplexity 2.569 3.433 5.408 took 0.998 sec
+epoch 1 min, mean, max perplexity 2.029 2.652 4.381 took 1.006 sec
+epoch 2 min, mean, max perplexity 1.826 2.341 3.825 took 1.010 sec
+epoch 3 min, mean, max perplexity 1.734 2.155 3.451 took 1.008 sec
+epoch 4 min, mean, max perplexity 1.693 2.030 3.171 took 1.007 sec
+epoch 5 min, mean, max perplexity 1.648 1.938 2.948 took 1.009 sec
+epoch 6 min, mean, max perplexity 1.614 1.862 2.774 took 1.009 sec
+epoch 7 min, mean, max perplexity 1.566 1.792 2.627 took 1.012 sec
+epoch 8 min, mean, max perplexity 1.508 1.732 2.474 took 1.010 sec
+epoch 9 min, mean, max perplexity 1.470 1.686 2.338 took 1.010 sec
 ```
+
 
