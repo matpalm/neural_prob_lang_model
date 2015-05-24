@@ -6,6 +6,7 @@
 # - no adaptive learning rates / schedules, just fixed rate
 # - no batching, train one example at a time.
 # - trivial randn weight init
+# - no bias with dot products
 
 import sys, time
 import numpy as np

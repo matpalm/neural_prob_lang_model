@@ -3,7 +3,7 @@
 # generate a sequence of embedded reber string
 # see original LSTM paper, s5.1 exp1
 
-import random, sys
+import random, sys, optparse
 
 def coin_flip():
     return 0 if random.random() < 0.5 else 1
@@ -26,12 +26,20 @@ def embedded_reber_sequence():
     path = "T" if coin_flip() else "P"
     return ["B"] + [path] + reber_sequence() + [path] + ["E"]
 
+optparser = optparse.OptionParser(prog='generate', description='generate embedded reber strings')
+optparser.add_option('--num', None, dest='num', type='int', default=10,
+                     help='number of strings to generate')
+optparser.add_option('--seq-length', None, dest='seq_length', type='int', default=None,
+                     help='if set, only generate of this length. must be >=10')
+opts, arguments = optparser.parse_args()
 
-num_to_generate = None
-try:
-    num_to_generate = int(sys.argv[1])
-except:
-    raise Exception("usage: " + sys.argv[0] + " num_strings_to_generate")
+if opts.seq_length != None and opts.seq_length < 10:
+    raise Exception("seq-length must be >=10")
 
-for _ in xrange(0, num_to_generate):
-    print "".join(embedded_reber_sequence())
+for _ in xrange(0, opts.num):
+    while True:  # o_O
+        candidate = embedded_reber_sequence()
+        if opts.seq_length == None or len(candidate) == opts.seq_length:
+            print "".join(candidate)
+            break
+

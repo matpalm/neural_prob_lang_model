@@ -6,8 +6,8 @@ the [reber grammar](http://www.willamette.edu/~gorr/classes/cs449/reber.html) is
 for RNN testing. in particular we'll use the embedded form of the grammar.
 
 ```
-$ ./generate.py 1000 > training
-$ ./generate.py 100 > test
+$ ./generate.py --num 1000 > training
+$ ./generate.py --num 100 > test
 $ head -n5 test
 BTBTXXTVPSETE
 BTBPVVETE
@@ -20,7 +20,7 @@ lengths of string are potentially unbounded but majority are <20
 (histogram.py provided by the awesome [data_hacks](https://github.com/bitly/data_hacks) lib)
 
 ```
-$ ./generate.py 100000 | perl -ne'print length($_)."\n";' | histogram.py 
+$ ./generate.py --num 100000 | perl -ne'print length($_)."\n";' | histogram.py
 # NumSamples = 100000; Min = 10.00; Max = 45.00
 # Mean = 13.007970; Variance = 11.508306; SD = 3.392389; Median 12.000000
 # each ∎ represents a count of 896
@@ -78,6 +78,7 @@ simple as you can RNN.
 * no adaptive learning rates / schedules, just fixed rate
 * no batching, train one example at a time.
 * trivial randn weight init
+* no bias with dot products
 
 ```
 $ ./simple_rnn_model.py training test
