@@ -1,18 +1,23 @@
 #!/usr/bin/env python
 
 # simplest-as-we-can rnn model
+
 # - no gating within unit at all
 # - no (other) protection against exploding or vanishing gradients
-# - no adaptive learning rates / schedules, just fixed rate
 # - no batching, train one example at a time.
 # - trivial randn weight init
 # - no bias with dot products
 
-import sys, time
+import sys, time, optparse
 import numpy as np
 from util import load_training_test, perplexity_of_sequence, TokenIdx
 import theano
 import theano.tensor as T
+
+optparser = optparse.OptionParser(prog='simple_rnn_model')
+optparser.add_option('--adaptive-learning-rate', None, dest='adaptive_learning_rate_fn', type='string', 
+                     default="vanilla", help='adaptive learning rate method')
+opts, _arguments = optparser.parse_args()
 
 training, test = load_training_test(sys.argv[1], sys.argv[2])
 
@@ -65,12 +70,34 @@ def recurrent_step(x_t, h_t0):
 # loss is just cross entropy of the softmax output compared to the target
 cross_entropy = T.mean(T.nnet.categorical_crossentropy(t_y_softmax, t_y))
 
-# extremely vanilla adaptiveless update, bound to sub optimal but fine for now
+# gradient update; either vanilla or rmsprop
+learning_rate = 0.05
+
+def vanilla(params, gradients):
+    return [(param, param - learning_rate * gradient) for param, gradient in zip(params, gradients)]
+
+def rmsprop(params, gradients):
+    updates = []
+    for param_t0, gradient in zip(params, gradients):
+        # rmsprop see slide 29 of http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
+        # first the mean_sqr exponential moving average
+        # TODO: hmmm. current checkpointer doesn't support this at all :(
+        mean_sqr_t0 = theano.shared(np.zeros(param_t0.get_value().shape, dtype=param_t0.get_value().dtype))  # zeros in same shape are param
+        mean_sqr_t1 = 0.9 * mean_sqr_t0 + 0.1 * (gradient**2)
+        updates.append((mean_sqr_t0, mean_sqr_t1))
+        # update param surpressing gradient by this average
+        param_t1 = param_t0 - learning_rate * (gradient / T.sqrt(mean_sqr_t1 + 1e-10))
+        updates.append((param_t0, param_t1))
+    return updates
+
+# lookup update fn from opts
+update_fn = globals().get(opts.adaptive_learning_rate_fn)
+if update_fn == None:
+    raise Exception("no update_fn " + opts.adaptive_learning_rate_fn)
+
 params = [t_Wx, t_Wrec, t_Wy]
 gradients = T.grad(cost=cross_entropy, wrt=params)
-updates = []
-for param, gradient in zip(params, gradients):
-    updates.append((param, param - 0.05 * gradient))
+updates = update_fn(params, gradients)
 
 print "compiling"
 
@@ -83,16 +110,14 @@ train_fn = theano.function(inputs=[t_x, t_y],
 predict_fn = theano.function(inputs=[t_x],
                              outputs=t_y_softmax)  # full distribution
 
-# do 10 epochs
-for epoch in range(10):
+for epoch in range(5):
     start_time = time.time()
 
     # train all examples. no batching yet!! o_O
     for n, training_eg in enumerate(training):
         x, y = training_eg[:-1], training_eg[1:]
         cost, = train_fn(x, y)
-        if n % 10 == 0:
-            print "COST\t%s" % cost
+        print "COST\t%s" % cost
 
     # eval test set (again no batching)
     perplexities = []
