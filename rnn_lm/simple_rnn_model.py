@@ -76,22 +76,23 @@ print "compiling"
 
 # compile function for training; ie with backprop updates
 train_fn = theano.function(inputs=[t_x, t_y],
-                           outputs=[],
+                           outputs=[cross_entropy],
                            updates=updates)
 
 # compile function to emit predictions
 predict_fn = theano.function(inputs=[t_x],
                              outputs=t_y_softmax)  # full distribution
 
-
 # do 10 epochs
 for epoch in range(10):
     start_time = time.time()
 
     # train all examples. no batching yet!! o_O
-    for training_eg in training:
+    for n, training_eg in enumerate(training):
         x, y = training_eg[:-1], training_eg[1:]
-        train_fn(x, y)
+        cost, = train_fn(x, y)
+        if n % 10 == 0:
+            print "COST\t%s" % cost
 
     # eval test set (again no batching)
     perplexities = []
