@@ -72,7 +72,7 @@ min, mean, max perplexity 3.18062061871 3.54441314096 4.09765369567
 
 ### some rnns
 
-![cost](nplm/rnn_lm/cost.png?raw=true "cost")
+![cost](cost.png?raw=true "cost")
 
 #### simple as you can get
 
