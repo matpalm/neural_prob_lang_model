@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-# simplest-as-we-can rnn model
+# bidirectional rnn model
+# equivalent to vanilla model but with a backwards iteration layer.
 
 # - no gating within unit at all
 # - no (other) protection against exploding or vanishing gradients
@@ -42,30 +43,49 @@ t_y = T.ivector('y')  # eg A B A D /s  for sequence A B A D
 t_h0 = theano.shared(np.zeros(n_hidden, dtype='float32'), name='h0', borrow=True)
 
 # learnt weights. init for now with simple randn.
-# TODO: orthogonalize? or just identity (le paper)
-t_Wx = theano.shared(np.asarray(np.random.randn(n_hidden, n_in), dtype='float32'),
-                     name='Wx', borrow=True)
-t_Wrec = theano.shared(np.asarray(np.random.randn(n_hidden, n_hidden), dtype='float32'),
-                     name='Wrec', borrow=True)
-t_Wy = theano.shared(np.asarray(np.random.randn(n_in, n_hidden), dtype='float32'),
-                     name='Wy', borrow=True)
+t_Wx_f = theano.shared(np.asarray(np.random.randn(n_hidden, n_in), dtype='float32'),
+                      name='Wx_f', borrow=True)  # for x, forward pass
+t_Wrec_f = theano.shared(np.asarray(np.random.randn(n_hidden, n_hidden), dtype='float32'),
+                        name='Wrec_f', borrow=True)  # for h recursion, forward pass
+t_Wy_f = theano.shared(np.asarray(np.random.randn(n_in, n_hidden), dtype='float32'),
+                      name='Wy_f', borrow=True)  # for y, forward pass
+t_Wx_b = theano.shared(np.asarray(np.random.randn(n_hidden, n_in), dtype='float32'),
+                      name='Wx_b', borrow=True)  # for x, backwards pass
+t_Wrec_b = theano.shared(np.asarray(np.random.randn(n_hidden, n_hidden), dtype='float32'),
+                        name='Wrec_b', borrow=True)  # for h recursion, backwards pass
+t_Wy_b = theano.shared(np.asarray(np.random.randn(n_in, n_hidden), dtype='float32'),
+                      name='Wy_b', borrow=True)  # for y, backwards pass
 
-def recurrent_step(x_t, h_t0):
-    # calc new hidden state; elementwise add of embedded input & 
+def scan_through_x(x_t,            # sequence to scan
+                   h_t0,           # recurrent state
+                   Wx, Wrec, Wy):  # non_sequences
+
+    # calc new hidden state; elementwise add of embedded input &
     # recurrent weights dot _last_ hiddenstate
-    h_t = T.nnet.sigmoid(t_Wx[:, x_t] + T.dot(t_Wrec, h_t0))
-    # note: h_t1 = T.tanh and no clipping explodes _very_ quickly! :/
-
-    # calc output; softmax over output weights dot hidden state
-    y_t = T.flatten(T.nnet.softmax(T.dot(t_Wy, h_t)), 1)
-
-    # return what we want to have per output step
+    h_t = T.nnet.sigmoid(Wx[:, x_t] + T.dot(Wrec, h_t0))
+    # calc contribution to y
+    y_t = T.dot(Wy, h_t)
+    # return next hidden state and y contribution
     return [h_t, y_t]
 
-# define the recurrence
-[h_ts, t_y_softmax], _ = theano.scan(fn=recurrent_step,
-                                     sequences=[t_x],
-                                     outputs_info=[t_h0, None])
+# forward scan through x collecting contributions to y
+[_h_ts, y_ts_f], _ = theano.scan(fn = scan_through_x,
+                                 go_backwards = False,
+                                 sequences = [t_x],
+                                 non_sequences = [t_Wx_f, t_Wrec_f, t_Wy_f],
+                                 outputs_info = [t_h0, None])
+
+# backwards scan through x collecting contributions to y
+[_h_ts, y_ts_b], _ = theano.scan(fn = scan_through_x,
+                                 go_backwards = True,
+                                 sequences = [t_x],
+                                 non_sequences = [t_Wx_b, t_Wrec_b, t_Wy_b],
+                                 outputs_info = [t_h0, None])
+
+# elementwise combine y contributions and apply softmax
+t_y_softmax, _ = theano.scan(fn = lambda y_f, y_b: T.flatten(T.nnet.softmax(y_f + y_b), 1),
+                             sequences = [y_ts_f, y_ts_b],
+                             outputs_info = [None])
 
 # loss is just cross entropy of the softmax output compared to the target
 cross_entropy = T.mean(T.nnet.categorical_crossentropy(t_y_softmax, t_y))
@@ -95,7 +115,7 @@ update_fn = globals().get(opts.adaptive_learning_rate_fn)
 if update_fn == None:
     raise Exception("no update_fn " + opts.adaptive_learning_rate_fn)
 
-params = [t_Wx, t_Wrec, t_Wy]
+params = [t_Wx_f, t_Wrec_f, t_Wy_f, t_Wx_b, t_Wrec_b, t_Wy_b]
 gradients = T.grad(cost=cross_entropy, wrt=params)
 updates = update_fn(params, gradients)
 

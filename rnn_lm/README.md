@@ -70,10 +70,15 @@ $ ./bigram_model.py training test
 min, mean, max perplexity 3.18062061871 3.54441314096 4.09765369567
 ```
 
-### super dead simple rnn
+### some rnns
+
+![cost](nplm/rnn_lm/cost.png?raw=true "cost")
+
+#### simple as you can get
 
 simple as you can RNN.
 
+* single layer RNN
 * no gating within unit at all
 * no adaptive learning rates / schedules, just fixed rate
 * no batching, train one example at a time.
@@ -81,17 +86,42 @@ simple as you can RNN.
 * no bias with dot products
 
 ```
-$ ./simple_rnn_model.py training test
-epoch 0 min, mean, max perplexity 3.288 4.168 6.284 took 0.993 sec
-epoch 1 min, mean, max perplexity 2.359 3.086 5.311 took 0.990 sec
-epoch 2 min, mean, max perplexity 1.995 2.601 4.462 took 0.990 sec
-epoch 3 min, mean, max perplexity 1.792 2.294 3.686 took 0.995 sec
-epoch 4 min, mean, max perplexity 1.658 2.095 3.125 took 0.994 sec
-epoch 5 min, mean, max perplexity 1.564 1.961 2.755 took 0.995 sec
-epoch 6 min, mean, max perplexity 1.509 1.866 2.542 took 0.994 sec
-epoch 7 min, mean, max perplexity 1.477 1.793 2.402 took 0.994 sec
-epoch 8 min, mean, max perplexity 1.458 1.737 2.302 took 0.993 sec
-epoch 9 min, mean, max perplexity 1.446 1.693 2.228 took 0.993 sec
+$ ./simple_rnn_model.py --adaptive-learning-rate=vanilla training test
+compilation took 6.698 s
+epoch 0 min, mean, max perplexity 1.359 1.537 2.025 took 1.003 sec
+epoch 1 min, mean, max perplexity 1.350 1.527 2.019 took 0.999 sec
+epoch 2 min, mean, max perplexity 1.350 1.529 2.099 took 1.003 sec
+epoch 3 min, mean, max perplexity 1.349 1.524 2.027 took 1.004 sec
+epoch 4 min, mean, max perplexity 1.334 1.529 1.999 took 1.007 sec
 ```
+
+#### using rmsprop adaptive learning rate
+
+* same as simple but using rmsprop (the default for --adaptive-learning-rate)
+
+```
+$ ./simple_rnn_model.py training test
+compilation took 6.55 s
+epoch 0 min, mean, max perplexity 1.327 1.526 1.952 took 1.018 sec
+epoch 1 min, mean, max perplexity 1.357 1.518 1.996 took 1.008 sec
+epoch 2 min, mean, max perplexity 1.338 1.523 1.869 took 1.025 sec
+epoch 3 min, mean, max perplexity 1.346 1.520 1.989 took 1.022 sec
+epoch 4 min, mean, max perplexity 1.333 1.522 2.044 took 1.009 sec
+```
+
+#### bidirectional rnn
+
+* same as rmsprop version but with bidirectional layer
+
+```
+$ ./bidirectional_rnn_model.py training test
+compilation took 18.921 s
+epoch 0 min, mean, max perplexity 1.081 1.290 1.883 took 1.940 sec
+epoch 1 min, mean, max perplexity 1.070 1.270 1.938 took 1.950 sec
+epoch 2 min, mean, max perplexity 1.074 1.271 2.271 took 1.955 sec
+epoch 3 min, mean, max perplexity 1.075 1.269 2.361 took 1.947 sec
+epoch 4 min, mean, max perplexity 1.087 1.268 2.369 took 1.952 sec
+```
+
 
 
