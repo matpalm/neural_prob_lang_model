@@ -74,9 +74,7 @@ min, mean, max perplexity 3.18062061871 3.54441314096 4.09765369567
 
 ![cost](cost.png?raw=true "cost")
 
-#### simple as you can get
-
-simple as you can RNN.
+#### v1. simple as you can get
 
 * single layer RNN
 * no gating within unit at all
@@ -95,9 +93,10 @@ epoch 3 min, mean, max perplexity 1.349 1.524 2.027 took 1.004 sec
 epoch 4 min, mean, max perplexity 1.334 1.529 1.999 took 1.007 sec
 ```
 
-#### using rmsprop adaptive learning rate
+#### v2. using rmsprop adaptive learning rate
 
 * same as simple but using rmsprop (the default for --adaptive-learning-rate)
+* uses double the parameters as simple; each param has a stored gradient moving average
 
 ```
 $ ./simple_rnn_model.py training test
@@ -109,9 +108,10 @@ epoch 3 min, mean, max perplexity 1.346 1.520 1.989 took 1.022 sec
 epoch 4 min, mean, max perplexity 1.333 1.522 2.044 took 1.009 sec
 ```
 
-#### bidirectional rnn
+#### v3. bidirectional rnn
 
 * same as rmsprop version but with bidirectional layer
+* uses double the parameters as rmsprop version; needs Wx, Wrec & Wy for _both_ directions
 
 ```
 $ ./bidirectional_rnn_model.py training test
