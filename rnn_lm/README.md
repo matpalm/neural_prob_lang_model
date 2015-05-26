@@ -123,5 +123,3 @@ epoch 3 min, mean, max perplexity 1.075 1.269 2.361 took 1.947 sec
 epoch 4 min, mean, max perplexity 1.087 1.268 2.369 took 1.952 sec
 ```
 
-
-
