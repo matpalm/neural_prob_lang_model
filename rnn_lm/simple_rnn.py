@@ -14,7 +14,7 @@ from util import load_training_test, perplexity_of_sequence, TokenIdx
 import theano
 import theano.tensor as T
 
-optparser = optparse.OptionParser(prog='simple_rnn_model')
+optparser = optparse.OptionParser(prog='simple_rnn')
 optparser.add_option('--adaptive-learning-rate', None, dest='adaptive_learning_rate_fn', type='string',
                      default="rmsprop", help='adaptive learning rate method')
 opts, _arguments = optparser.parse_args()

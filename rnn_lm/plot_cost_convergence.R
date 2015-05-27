@@ -1,8 +1,8 @@
-# ./simple_rnn_model.py training test --adaptive-learning-rate=vanilla \
+# ./simple_rnn.py training test --adaptive-learning-rate=vanilla \
 #   | grep COST > vanilla.cost
-# ./simple_rnn_model.py training test \
+# ./simple_rnn.py training test \
 #   | grep COST > rmsprop.cost
-# ./bidirectiona_rnn_model.py training test \
+# ./bidirectiona_rnn.py training test \
 #   | grep COST > bidirectional.cost
 
 # 800x400 cost.png
