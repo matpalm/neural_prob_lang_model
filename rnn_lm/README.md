@@ -84,7 +84,7 @@ min, mean, max perplexity 3.18062061871 3.54441314096 4.09765369567
 * no bias with dot products
 
 ```
-$ ./simple_rnn_model.py --adaptive-learning-rate=vanilla training test
+$ ./simple_rnn.py --adaptive-learning-rate=vanilla training test
 compilation took 6.698 s
 epoch 0 min, mean, max perplexity 1.359 1.537 2.025 took 1.003 sec
 epoch 1 min, mean, max perplexity 1.350 1.527 2.019 took 0.999 sec
@@ -99,7 +99,7 @@ epoch 4 min, mean, max perplexity 1.334 1.529 1.999 took 1.007 sec
 * uses double the parameters as simple; each param has a stored gradient moving average
 
 ```
-$ ./simple_rnn_model.py training test
+$ ./simple_rnn.py training test
 compilation took 6.55 s
 epoch 0 min, mean, max perplexity 1.327 1.526 1.952 took 1.018 sec
 epoch 1 min, mean, max perplexity 1.357 1.518 1.996 took 1.008 sec
@@ -114,7 +114,7 @@ epoch 4 min, mean, max perplexity 1.333 1.522 2.044 took 1.009 sec
 * uses double the parameters as rmsprop version; needs Wx, Wrec & Wy for _both_ directions
 
 ```
-$ ./bidirectional_rnn_model.py training test
+$ ./bidirectional_rnn.py training test
 compilation took 18.921 s
 epoch 0 min, mean, max perplexity 1.081 1.290 1.883 took 1.940 sec
 epoch 1 min, mean, max perplexity 1.070 1.270 1.938 took 1.950 sec
