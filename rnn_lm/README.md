@@ -123,3 +123,17 @@ epoch 3 min, mean, max perplexity 1.075 1.269 2.361 took 1.947 sec
 epoch 4 min, mean, max perplexity 1.087 1.268 2.369 took 1.952 sec
 ```
 
+#### v4. gru
+
+* unidirectional but this time with [GRU](http://arxiv.org/abs/1502.02367)
+
+```
+$ ./gru_rnn.py training test
+compilation took 11.194 s
+epoch 0 min, mean, max perplexity 1.233 1.464 1.969 took 1.792 sec
+epoch 1 min, mean, max perplexity 1.271 1.449 1.904 took 1.794 sec
+epoch 2 min, mean, max perplexity 1.272 1.444 1.911 took 1.794 sec
+epoch 3 min, mean, max perplexity 1.277 1.446 1.999 took 1.818 sec
+epoch 4 min, mean, max perplexity 1.264 1.450 1.974 took 1.810 sec
+```
+
