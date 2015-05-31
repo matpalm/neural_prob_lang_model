@@ -13,6 +13,15 @@ def perplexity_of_sequence(probabilities):
     perplexity_sum = sum([np.log2(max(1e-10, p)) for p in probabilities])
     return 2**((-1./len(probabilities)) * perplexity_sum)
 
+def stats(values):
+    summary_stats = [min(values), np.mean(values), max(values)]
+    return "(" + " ".join(["%.3f" % v for v in summary_stats]) + ")"
+
+def perplexities_and_second_last_probs(prob_seqs):
+    perplexities = [perplexity_of_sequence(prob_seq) for prob_seq in prob_seqs]
+    second_last_probs = [prob_seq[-2] for prob_seq in prob_seqs]
+    return "min, mean, max  perplexity %s  second_last %s" % (stats(perplexities), stats(second_last_probs))
+
 class TokenIdx(object):  # todo: is there nothing like this in scipy/numpy ? hmm :/
 
     def __init__(self):
@@ -43,5 +52,3 @@ class TokenIdx(object):  # todo: is there nothing like this in scipy/numpy ? hmm
 
     def num_entries(self):
         return self.seq
-
-

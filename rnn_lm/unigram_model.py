@@ -4,7 +4,7 @@
 import sys
 import numpy as np
 from collections import defaultdict
-from util import load_training_test, perplexity_of_sequence
+from util import load_training_test, perplexities_and_second_last_probs
 
 training, test = load_training_test(sys.argv[1], sys.argv[2])
 
@@ -17,8 +17,8 @@ for seq in training:
     total += len(seq)
 
 # test; probability of anything is based on unigram frequency
-perplexities = []
+prob_seqs = []
 for seq in test:
-    seq_probabilities = [float(token_freq[c]) / total for c in seq]    
-    perplexities.append(perplexity_of_sequence(seq_probabilities))
-print "min, mean, max perplexity", min(perplexities), np.mean(perplexities), max(perplexities)
+    probs = [float(token_freq[c]) / total for c in seq]    
+    prob_seqs.append(probs)
+print perplexities_and_second_last_probs(prob_seqs)

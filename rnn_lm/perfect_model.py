@@ -5,7 +5,7 @@
 
 import sys
 import numpy as np
-from util import load_training_test, perplexity_of_sequence
+from util import load_training_test, perplexities_and_second_last_probs
 
 _training, test = load_training_test(sys.argv[1], sys.argv[2])
 
@@ -13,7 +13,7 @@ _training, test = load_training_test(sys.argv[1], sys.argv[2])
 # ignore data
 
 # test; assume perfect prediction
-perplexities = []
+prob_seqs = []
 for seq in test:
-    perplexities.append(perplexity_of_sequence([1.0] * len(seq)))
-print "min, mean, max perplexity", min(perplexities), np.mean(perplexities), max(perplexities)
+    prob_seqs.append([1.0] * len(seq))
+print perplexities_and_second_last_probs(prob_seqs)

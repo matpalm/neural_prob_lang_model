@@ -9,12 +9,16 @@ for RNN testing. in particular we'll use the embedded form of the grammar.
 $ ./generate.py --num 1000 > training
 $ ./generate.py --num 100 > test
 $ head -n5 test
-BTBTXXTVPSETE
-BTBPVVETE
-BTBPVPXTTTVPSETE
-BTBTXXVVETE
-BTBTSSXSETE
+BPBPTVVEPE
+BPBTSSSXXVVEPE
+BTBTSSXXVPXVPXVPXTTTTVVETE
+BPBPVPSEPE
+BTBPTVVETE
 ```
+
+one interesting thing to note in the embedded form of the grammar is that the second token is
+always the same as the second last token; either a P or a T. this is one of the long term dependencies the
+model needs to learn to handle, though we'll see it's trivial for some models.
 
 lengths of string are potentially unbounded but majority are <20
 (histogram.py provided by the awesome [data_hacks](https://github.com/bitly/data_hacks) lib)
@@ -36,29 +40,36 @@ $ ./generate.py --num 100000 | perl -ne'print length($_)."\n";' | histogram.py
    41.5000 -    45.0000 [     5]: 
 ```
 
+we'll examine a number of differing models for this task and report two stats
+1) [perplexity](http://en.wikipedia.org/wiki/Perplexity#Perplexity_per_word)
+and 2) the precision of predicting the second last character.
+
 ## trivial models
 
 ### sanity check models
 
-mainly included as a sanity check of perplexity range
+just included as a sanity check stats
 
 ```
-# just assume P(w) is uniform (grammar has 7 items)
+# just assume P(w) is uniform (grammar has 7 items; 1/7 = 0.143)
 $ ./uniform_model.py training test  
-min, mean, max perplexity 7.0 7.0 7.0
+min, mean, max  perplexity (7.000 7.000 7.000)  second_last (0.143 0.143 0.143)
 
 # perfect model predicts every transistion perfectly
 $ ./perfect_model.py training test  
-min, mean, max perplexity 1.0 1.0 1.0
+min, mean, max  perplexity (1.000 1.000 1.000)  second_last (1.000 1.000 1.000)
 ```
 
 ### unigram model
 
 P(w_{n} | w_{n-1})
 
+not much better than just a uniform model. 
+terrible at the second last prediction since it's just the frequency of the observed tokens.
+
 ```
 $ ./unigram_model.py training test
-min, mean, max perplexity 5.65320988827 6.58426607105 8.0107271951
+min, mean, max  perplexity (5.844 6.726 8.072)  second_last (0.164 0.181 0.209)
 ```
 
 ### bigram model
@@ -67,7 +78,7 @@ P(w_{n} | w_{n-1}, W_{n-2})
 
 ```
 $ ./bigram_model.py training test
-min, mean, max perplexity 3.18062061871 3.54441314096 4.09765369567
+min, mean, max  perplexity (2.742 3.128 3.933)  second_last (0.495 0.499 0.505)
 ```
 
 ### some rnns
@@ -83,14 +94,16 @@ min, mean, max perplexity 3.18062061871 3.54441314096 4.09765369567
 * trivial randn weight init
 * no bias with dot products
 
+can see a much lower perplexity compares to ngram model and second_last precision tending to 1.0
+
 ```
-$ ./simple_rnn.py --adaptive-learning-rate=vanilla training test
+$ ./simple_rnn.py training test --adaptive-learning-rate=vanilla
 compilation took 6.698 s
-epoch 0 min, mean, max perplexity 1.359 1.537 2.025 took 1.003 sec
-epoch 1 min, mean, max perplexity 1.350 1.527 2.019 took 0.999 sec
-epoch 2 min, mean, max perplexity 1.350 1.529 2.099 took 1.003 sec
-epoch 3 min, mean, max perplexity 1.349 1.524 2.027 took 1.004 sec
-epoch 4 min, mean, max perplexity 1.334 1.529 1.999 took 1.007 sec
+epoch 0 min, mean, max  perplexity (3.321 4.162 5.726)  second_last (0.194 0.253 0.325) took 0.994 sec
+epoch 1 min, mean, max  perplexity (2.183 2.746 4.032)  second_last (0.421 0.519 0.640) took 1.004 sec
+epoch 2 min, mean, max  perplexity (1.775 2.173 3.247)  second_last (0.739 0.807 0.874) took 0.994 sec
+epoch 3 min, mean, max  perplexity (1.613 1.935 2.788)  second_last (0.864 0.902 0.942) took 0.995 sec
+epoch 4 min, mean, max  perplexity (1.531 1.808 2.497)  second_last (0.914 0.937 0.966) took 0.995 sec
 ```
 
 #### v2. using rmsprop adaptive learning rate
@@ -98,14 +111,16 @@ epoch 4 min, mean, max perplexity 1.334 1.529 1.999 took 1.007 sec
 * same as simple but using rmsprop (the default for --adaptive-learning-rate)
 * uses double the parameters as simple; each param has a stored gradient moving average
 
+main difference to previous model is convergence much faster
+
 ```
 $ ./simple_rnn.py training test
 compilation took 6.55 s
-epoch 0 min, mean, max perplexity 1.327 1.526 1.952 took 1.018 sec
-epoch 1 min, mean, max perplexity 1.357 1.518 1.996 took 1.008 sec
-epoch 2 min, mean, max perplexity 1.338 1.523 1.869 took 1.025 sec
-epoch 3 min, mean, max perplexity 1.346 1.520 1.989 took 1.022 sec
-epoch 4 min, mean, max perplexity 1.333 1.522 2.044 took 1.009 sec
+epoch 0 min, mean, max  perplexity (1.338 1.540 2.209)  second_last (1.000 1.000 1.000) took 0.999 sec
+epoch 1 min, mean, max  perplexity (1.370 1.538 2.141)  second_last (1.000 1.000 1.000) took 1.001 sec
+epoch 2 min, mean, max  perplexity (1.368 1.537 2.107)  second_last (1.000 1.000 1.000) took 0.997 sec
+epoch 3 min, mean, max  perplexity (1.354 1.558 2.292)  second_last (1.000 1.000 1.000) took 0.998 sec
+epoch 4 min, mean, max  perplexity (1.359 1.558 2.290)  second_last (1.000 1.000 1.000) took 1.003 sec
 ```
 
 #### v3. bidirectional rnn
@@ -116,24 +131,27 @@ epoch 4 min, mean, max perplexity 1.333 1.522 2.044 took 1.009 sec
 ```
 $ ./bidirectional_rnn.py training test
 compilation took 18.921 s
-epoch 0 min, mean, max perplexity 1.081 1.290 1.883 took 1.940 sec
-epoch 1 min, mean, max perplexity 1.070 1.270 1.938 took 1.950 sec
-epoch 2 min, mean, max perplexity 1.074 1.271 2.271 took 1.955 sec
-epoch 3 min, mean, max perplexity 1.075 1.269 2.361 took 1.947 sec
-epoch 4 min, mean, max perplexity 1.087 1.268 2.369 took 1.952 sec
+epoch 0 min, mean, max  perplexity (1.087 1.268 1.885)  second_last (1.000 1.000 1.000) took 1.935 sec
+epoch 1 min, mean, max  perplexity (1.086 1.263 2.148)  second_last (1.000 1.000 1.000) took 1.945 sec
+epoch 2 min, mean, max  perplexity (1.073 1.291 2.172)  second_last (1.000 1.000 1.000) took 1.940 sec
+epoch 3 min, mean, max  perplexity (1.073 1.308 2.504)  second_last (1.000 1.000 1.000) took 1.948 sec
+epoch 4 min, mean, max  perplexity (1.073 1.282 2.942)  second_last (1.000 1.000 1.000) took 1.950 sec
 ```
 
 #### v4. gru
 
-* unidirectional but this time with [GRU](http://arxiv.org/abs/1502.02367)
+* same as simple (unidirectional) but this time with [GRU](http://arxiv.org/abs/1502.02367)
 
 ```
 $ ./gru_rnn.py training test
 compilation took 11.194 s
-epoch 0 min, mean, max perplexity 1.233 1.464 1.969 took 1.792 sec
-epoch 1 min, mean, max perplexity 1.271 1.449 1.904 took 1.794 sec
-epoch 2 min, mean, max perplexity 1.272 1.444 1.911 took 1.794 sec
-epoch 3 min, mean, max perplexity 1.277 1.446 1.999 took 1.818 sec
-epoch 4 min, mean, max perplexity 1.264 1.450 1.974 took 1.810 sec
+epoch 0 min, mean, max  perplexity (1.222 1.491 3.148)  second_last (0.999 1.000 1.000) took 1.830 sec
+epoch 1 min, mean, max  perplexity (1.231 1.468 1.966)  second_last (0.998 0.999 1.000) took 1.876 sec
+epoch 2 min, mean, max  perplexity (1.236 1.458 1.967)  second_last (1.000 1.000 1.000) took 1.826 sec
+epoch 3 min, mean, max  perplexity (1.238 1.457 2.084)  second_last (0.998 1.000 1.000) took 1.829 sec
+epoch 4 min, mean, max  perplexity (1.227 1.471 2.035)  second_last (0.997 1.000 1.000) took 1.816 sec
 ```
 
+## conclusions
+
+all works, but clearly need a harder problem :/

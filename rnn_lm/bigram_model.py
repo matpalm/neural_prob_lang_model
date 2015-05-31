@@ -5,7 +5,7 @@
 import sys
 import numpy as np
 from collections import defaultdict
-from util import load_training_test, perplexity_of_sequence
+from util import load_training_test, perplexities_and_second_last_probs
 
 training, test = load_training_test(sys.argv[1], sys.argv[2])
 
@@ -24,10 +24,10 @@ for w1 in bigram_freq.keys():
         bigram_prob[w1][w2] = float(bigram_freq[w1][w2]) / w2_total
 
 # test
-perplexities = []
+prob_seqs = []
 for seq in test:
     # small vocab so assume all bigrams have data from training (ie no need to backoff to unigram model)
     seq.insert(0, "<s>")
     bigram_probabilities = [bigram_prob[seq[i-1]][seq[i]] for i in xrange(1, len(seq))]
-    perplexities.append(perplexity_of_sequence(bigram_probabilities))
-print "min, mean, max perplexity", min(perplexities), np.mean(perplexities), max(perplexities)
+    prob_seqs.append(bigram_probabilities)
+print perplexities_and_second_last_probs(prob_seqs)

@@ -9,7 +9,7 @@
 
 import sys, time, optparse
 import numpy as np
-from util import load_training_test, perplexity_of_sequence, TokenIdx
+from util import load_training_test, perplexities_and_second_last_probs, TokenIdx
 import theano
 import theano.tensor as T
 
@@ -132,7 +132,7 @@ for epoch in range(5):
         print "COST\t%s" % cost
 
     # eval test set (again no batching)
-    perplexities = []
+    prob_seqs = []
     for test_eg in test:
         probabilities = []
         x, y = test_eg[:-1], test_eg[1:]
@@ -140,8 +140,8 @@ for epoch in range(5):
         for y_true_i, y_softmax in zip(y, y_softmaxs):
             y_true_confidence = y_softmax[y_true_i]
             probabilities.append(y_true_confidence)
-        perplexities.append(perplexity_of_sequence(probabilities))
+        prob_seqs.append(probabilities)
 
     print "epoch", epoch,
-    print "min, mean, max perplexity", " ".join(["%.3f"%s for s in [min(perplexities), np.mean(perplexities), max(perplexities)]]),
+    print perplexities_and_second_last_probs(prob_seqs),
     print "took %.3f sec" % (time.time()-start_time)
