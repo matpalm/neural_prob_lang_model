@@ -43,12 +43,9 @@ t_h0 = theano.shared(np.zeros(n_hidden, dtype='float32'), name='h0', borrow=True
 
 # learnt weights. init for now with simple randn.
 # TODO: orthogonalize? or just identity (le paper)
-t_Wx = theano.shared(np.asarray(np.random.randn(n_hidden, n_in), dtype='float32'),
-                     name='Wx', borrow=True)
-t_Wrec = theano.shared(np.asarray(np.random.randn(n_hidden, n_hidden), dtype='float32'),
-                     name='Wrec', borrow=True)
-t_Wy = theano.shared(np.asarray(np.random.randn(n_in, n_hidden), dtype='float32'),
-                     name='Wy', borrow=True)
+t_Wx = theano.shared(np.asarray(np.random.randn(n_hidden, n_in), dtype='float32'), name='Wx', borrow=True)
+t_Wrec = theano.shared(np.asarray(np.random.randn(n_hidden, n_hidden), dtype='float32'), name='Wrec', borrow=True)
+t_Wy = theano.shared(np.asarray(np.random.randn(n_in, n_hidden), dtype='float32'), name='Wy', borrow=True)
 
 def recurrent_step(x_t, h_t0):
     # calc new hidden state; elementwise add of embedded input & 

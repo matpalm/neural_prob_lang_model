@@ -43,18 +43,13 @@ t_y = T.ivector('y')  # eg A B A D /s  for sequence A B A D
 t_h0 = theano.shared(np.zeros(n_hidden, dtype='float32'), name='h0', borrow=True)
 
 # learnt weights. init for now with simple randn.
-t_Wx_f = theano.shared(np.asarray(np.random.randn(n_hidden, n_in), dtype='float32'),
-                      name='Wx_f', borrow=True)  # for x, forward pass
-t_Wrec_f = theano.shared(np.asarray(np.random.randn(n_hidden, n_hidden), dtype='float32'),
-                        name='Wrec_f', borrow=True)  # for h recursion, forward pass
-t_Wy_f = theano.shared(np.asarray(np.random.randn(n_in, n_hidden), dtype='float32'),
-                      name='Wy_f', borrow=True)  # for y, forward pass
-t_Wx_b = theano.shared(np.asarray(np.random.randn(n_hidden, n_in), dtype='float32'),
-                      name='Wx_b', borrow=True)  # for x, backwards pass
-t_Wrec_b = theano.shared(np.asarray(np.random.randn(n_hidden, n_hidden), dtype='float32'),
-                        name='Wrec_b', borrow=True)  # for h recursion, backwards pass
-t_Wy_b = theano.shared(np.asarray(np.random.randn(n_in, n_hidden), dtype='float32'),
-                      name='Wy_b', borrow=True)  # for y, backwards pass
+# _f for foward pass, _b for backwards pass
+t_Wx_f = theano.shared(np.asarray(np.random.randn(n_hidden, n_in), dtype='float32'), name='Wx_f', borrow=True)
+t_Wrec_f = theano.shared(np.asarray(np.random.randn(n_hidden, n_hidden), dtype='float32'), name='Wrec_f', borrow=True)
+t_Wy_f = theano.shared(np.asarray(np.random.randn(n_in, n_hidden), dtype='float32'), name='Wy_f', borrow=True)
+t_Wx_b = theano.shared(np.asarray(np.random.randn(n_hidden, n_in), dtype='float32'), name='Wx_b', borrow=True)
+t_Wrec_b = theano.shared(np.asarray(np.random.randn(n_hidden, n_hidden), dtype='float32'), name='Wrec_b', borrow=True)
+t_Wy_b = theano.shared(np.asarray(np.random.randn(n_in, n_hidden), dtype='float32'), name='Wy_b', borrow=True)
 
 def scan_through_x(x_t,            # sequence to scan
                    h_t0,           # recurrent state
