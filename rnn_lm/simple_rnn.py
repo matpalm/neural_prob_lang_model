@@ -10,7 +10,8 @@
 
 import sys, time, optparse
 import numpy as np
-from util import load_training_test, perplexities_and_second_last_probs, TokenIdx
+import util
+import reber_grammar as rb
 import theano
 import theano.tensor as T
 
@@ -19,19 +20,12 @@ optparser.add_option('--adaptive-learning-rate', None, dest='adaptive_learning_r
                      default="rmsprop", help='adaptive learning rate method')
 opts, _arguments = optparser.parse_args()
 
-training, test = load_training_test(sys.argv[1], sys.argv[2])
-
 # data is just characters, ['A', 'B', 'A', ... ]
 # but we left and right pad with <s> and </s> to include prediction of start/end of sequence
 # and convert to idxs
-vocab = TokenIdx()
-def convert_to_ids(vocab, data):
-    return [vocab.ids_for(["<s>"] + sequence + ["</s>"]) for sequence in data]
-training = convert_to_ids(vocab, training)
-test = convert_to_ids(vocab, test)
 
 # matrix sizing
-n_in = vocab.num_entries()
+n_in = rb.vocab_size()
 n_hidden = 10
 
 # t_x input and t_y output sequence
@@ -112,23 +106,26 @@ print "compilation took %0.3f s" % (time.time()-compile_start_time)
 for epoch in range(5):
     start_time = time.time()
 
-    # train all examples. no batching yet!! o_O
-    for n, training_eg in enumerate(training):
+    # train on 1000 examples. no batching yet!! o_O
+    for _ in xrange(1000):
+        training_eg = rb.ids_for(rb.embedded_reber_sequence())
         x, y = training_eg[:-1], training_eg[1:]
         cost, = train_fn(x, y)
         #print "COST\t%s" % cost
 
-    # eval test set (again no batching)
+    # test on another 100
     prob_seqs = []
-    for test_eg in test:
+    for _ in xrange(100):
         probabilities = []
+        test_eg = rb.ids_for(rb.embedded_reber_sequence())
         x, y = test_eg[:-1], test_eg[1:]
         y_softmaxs = predict_fn(x)
         for y_true_i, y_softmax in zip(y, y_softmaxs):
             y_true_confidence = y_softmax[y_true_i]
             probabilities.append(y_true_confidence)
         prob_seqs.append(probabilities)
+        #print util.prob_stats(x, y, probabilities)
 
     print "epoch", epoch,
-    print perplexities_and_second_last_probs(prob_seqs),
+    print util.perplexity_stats(prob_seqs),
     print "took %.3f sec" % (time.time()-start_time)

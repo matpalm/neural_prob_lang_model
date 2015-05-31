@@ -5,18 +5,19 @@
 
 import sys
 import numpy as np
-from util import load_training_test, perplexities_and_second_last_probs
-
-training, test = load_training_test(sys.argv[1], sys.argv[2])
+import util
+import reber_grammar as rb
 
 # training; just record set of observed symbols
 observed_symbols = set()
-for seq in training:
+for _ in xrange(1000):    
+    seq = rb.embedded_reber_sequence(include_start_end=False)
     observed_symbols.update(seq)
 
 # test; probability of anything in sequence is uniform
 prob_seqs = []
 uniform_prob = 1.0 / len(observed_symbols)
-for seq in test:
+for _ in xrange(100):
+    seq = rb.embedded_reber_sequence(include_start_end=False)
     prob_seqs.append([uniform_prob] * len(seq))
-print perplexities_and_second_last_probs(prob_seqs)
+print util.perplexity_stats(prob_seqs)

@@ -1,54 +1,26 @@
 import sys
 import numpy as np
 
-def read_sequences(filename):
-    lines = map(str.strip, open(filename).readlines())
-    sequences = [[c for c in line] for line in lines]
-    return sequences
-
-def load_training_test(training_file, test_file):
-    return (read_sequences(training_file), read_sequences(test_file))
-
 def perplexity_of_sequence(probabilities):
     perplexity_sum = sum([np.log2(max(1e-10, p)) for p in probabilities])
     return 2**((-1./len(probabilities)) * perplexity_sum)
 
 def stats(values):
-    summary_stats = [min(values), np.mean(values), max(values)]
+    summary_stats = [min(values), np.median(values), max(values)]
     return "(" + " ".join(["%.3f" % v for v in summary_stats]) + ")"
 
-def perplexities_and_second_last_probs(prob_seqs):
+def perplexity_stats(prob_seqs):
     perplexities = [perplexity_of_sequence(prob_seq) for prob_seq in prob_seqs]
     second_last_probs = [prob_seq[-2] for prob_seq in prob_seqs]
     return "min, mean, max  perplexity %s  second_last %s" % (stats(perplexities), stats(second_last_probs))
 
-class TokenIdx(object):  # todo: is there nothing like this in scipy/numpy ? hmm :/
+def prob_stats(x, y, probs):
+    probs_str = ["%.2f" % p for p in probs]
+    return "xyp " + " ".join(map(str, zip(x, y, probs_str)))
 
-    def __init__(self):
-        self.token_idx = {}
-        self.idx_token = {}
-        self.seq = 0
+#def pad_sequences(seqs, padding="0"):
+#    max_sequence_length = max([len(seq) for seq in seqs])
+#    for seq in seqs:
+#        while len(seq) < max_sequence_length:
+#            seq.append(padding)
 
-    def id_exists_for(self, token):
-        return token in self.token_idx
-
-    def id_for(self, token):
-        if token in self.token_idx:
-            return self.token_idx[token]
-        else:
-            self.token_idx[token] = self.seq
-            self.idx_token[self.seq] = token
-            self.seq += 1
-            return self.seq - 1
-
-    def ids_for(self, tokens):
-        return [self.id_for(t) for t in tokens]
-
-    def token_for(self, idx):
-        return self.idx_token[idx]
-
-    def labels(self):
-        return [self.idx_token[i] for i in range(self.seq)]
-
-    def num_entries(self):
-        return self.seq

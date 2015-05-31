@@ -5,14 +5,13 @@
 import sys
 import numpy as np
 from collections import defaultdict
-from util import load_training_test, perplexities_and_second_last_probs
-
-training, test = load_training_test(sys.argv[1], sys.argv[2])
+import util
+import reber_grammar as rb
 
 # training; calculate bigram probabilities P(w2|w1)
 bigram_freq = defaultdict(lambda: defaultdict(int))
-for seq in training:
-    seq.insert(0, "<s>")  # padding with one value since we're doing a bigram model
+for _ in xrange(1000):
+    seq = rb.embedded_reber_sequence(include_start_end=True)  # to model start/end
     for i in xrange(1, len(seq)):
         bigram_freq[seq[i-1]][seq[i]] += 1
 bigram_prob = {}
@@ -25,9 +24,9 @@ for w1 in bigram_freq.keys():
 
 # test
 prob_seqs = []
-for seq in test:
+for _ in xrange(100):
+    seq = rb.embedded_reber_sequence(include_start_end=True)
     # small vocab so assume all bigrams have data from training (ie no need to backoff to unigram model)
-    seq.insert(0, "<s>")
     bigram_probabilities = [bigram_prob[seq[i-1]][seq[i]] for i in xrange(1, len(seq))]
     prob_seqs.append(bigram_probabilities)
-print perplexities_and_second_last_probs(prob_seqs)
+print util.perplexity_stats(prob_seqs)
