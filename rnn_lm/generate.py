@@ -16,9 +16,9 @@ def reber_sequence():
                      4: [(2, "P"), (5, "V")] }
     state, s = 0, ["B"]
     while state != 5:
-        transistion = transistions[state][coin_flip()]
-        state = transistion[0]
-        s.append(transistion[1])
+        next_state, emitted_symbol = transistions[state][coin_flip()]
+        state = next_state
+        s.append(emitted_symbol)
     s.append("E")
     return s
 
