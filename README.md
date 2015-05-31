@@ -10,5 +10,7 @@ v2 : first pass simple rewrite with a focus on embedding convergence visualisati
 
 hacking some simple RNN lang models; poking around with GRUs and bidirectional RNNs
 
+# mandatory embedding convergence pic
+
 ![embeddings](nplm/v0/embeddings.png?raw=true "embeddings")
 
