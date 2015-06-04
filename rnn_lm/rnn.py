@@ -37,9 +37,7 @@ n_hidden = 10
 t_x = T.ivector('x')  # eg s A B A D   for sequence A B A D
 t_y = T.ivector('y')  # eg A B A D /s  for sequence A B A D
 
-# initial hidden state for each sequence. always zero so just stored as shared.
-t_h0 = theano.shared(np.zeros(n_hidden, dtype='float32'), name='h0', borrow=True)
-
+# build specific rnn type
 rnn = None
 if opts.type == "simple":
     rnn = SimpleRnn(n_in, n_hidden)
@@ -50,7 +48,8 @@ elif opts.type == "gru":
 else:
     raise "unknown rnn type? [%s]" % opts.type
 
-# calculate y based on x and initial state 0.
+# calculate y based on x and initial hidden state of 0
+t_h0 = theano.shared(np.zeros(n_hidden, dtype='float32'), name='h0', borrow=True)
 t_y_softmax = rnn.t_y_softmax(t_x, t_h0)
 
 # loss is just cross entropy of the softmax output compared to the target
