@@ -96,7 +96,7 @@ can see a much lower perplexity compares to ngram model but worse performance at
 performance
 
 ```
-$ ./simple_rnn.py --adaptive-learning-rate=vanilla
+$ ./rnn.py --type=simple --adaptive-learning-rate=vanilla
 compilation took 6.698 s
 epoch 0 min, mean, max  perplexity (3.354 4.734 7.106)  second_last (0.091 0.234 0.354) took 0.986 sec
 epoch 1 min, mean, max  perplexity (2.360 3.137 5.002)  second_last (0.175 0.343 0.466) took 0.950 sec
@@ -113,7 +113,7 @@ epoch 4 min, mean, max  perplexity (1.690 2.018 2.693)  second_last (0.421 0.466
 main difference to previous model is convergence much faster
 
 ```
-$ ./simple_rnn.py --adaptive-learning-rate=rmsprop
+$ ./rnn.py --type=simple --adaptive-learning-rate=rmsprop
 compilation took 6.381 s
 epoch 0 min, mean, max  perplexity (1.380 1.571 1.897)  second_last (0.401 0.505 0.600) took 1.001 sec
 epoch 1 min, mean, max  perplexity (1.416 1.787 3.383)  second_last (0.322 0.507 0.782) took 0.978 sec
@@ -124,14 +124,14 @@ epoch 4 min, mean, max  perplexity (1.281 1.576 2.103)  second_last (0.115 0.696
 
 #### v3. bidirectional rnn
 
-* same as simple_rnn but with bidirectional layer
+* same as simple rnn but with bidirectional layer
 * uses twice the parameters again; needs Wx, Wrec & Wy for _both_ directions
 
 occasionally gets the sequence perfect (but this is luck since the generator is stochastic) but is
 immediately perfect now at second_last (makes sense given the shared forward/backwards features)
 
 ```
-$ ./bidirectional_rnn.py
+$ ./rnn.py --type=bidirectional
 compilation took 18.921 s
 epoch 0 min, mean, max  perplexity (1.003 1.190 1.798)  second_last (0.980 0.998 1.000) took 1.892 sec
 epoch 1 min, mean, max  perplexity (1.001 1.217 2.298)  second_last (0.999 1.000 1.000) took 1.945 sec
@@ -147,7 +147,7 @@ epoch 4 min, mean, max  perplexity (1.000 1.134 1.679)  second_last (1.000 1.000
 seems to learn the long term dependency, eventually... (though sometimes it's immediately)
 
 ```
-$ ./gru_rnn.py
+$ ./rnn.py --type=gru
 compilation took 11.123 s
 epoch 0 min, mean, max  perplexity (1.256 1.615 2.045)  second_last (0.264 0.498 0.733) took 1.699 sec
 epoch 1 min, mean, max  perplexity (1.386 1.595 2.060)  second_last (0.435 0.458 0.561) took 1.688 sec

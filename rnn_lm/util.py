@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+import theano
 
 def perplexity_of_sequence(probabilities):
     perplexity_sum = sum([np.log2(max(1e-10, p)) for p in probabilities])
@@ -17,6 +18,9 @@ def perplexity_stats(prob_seqs):
 def prob_stats(x, y, probs):
     probs_str = ["%.2f" % p for p in probs]
     return "xyp " + " ".join(map(str, zip(x, y, probs_str)))
+
+def sharedMatrix(n_rows, n_cols, name):
+    return theano.shared(np.asarray(np.random.randn(n_rows, n_cols), dtype='float32'), name=name, borrow=True)
 
 #def pad_sequences(seqs, padding="0"):
 #    max_sequence_length = max([len(seq) for seq in seqs])
