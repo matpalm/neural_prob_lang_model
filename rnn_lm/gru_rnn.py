@@ -21,7 +21,7 @@ class GruRnn(object):
         # calc reset gate activation
         r = T.nnet.sigmoid(self.t_Wr[:, x_t] + T.dot(self.t_Ur, h_t0))
         # calc candidate next hidden state (with reset)
-        h_t_candidate = T.nnet.sigmoid(self.t_Wx[:, x_t] + T.dot(r * self.t_Ux, h_t0))    
+        h_t_candidate = T.nnet.sigmoid(self.t_Wx[:, x_t] + T.dot(self.t_Ux, r * h_t0))
 
         # calc update gate activation 
         z = T.nnet.sigmoid(self.t_Wz[:, x_t] + T.dot(self.t_Uz, h_t0))
