@@ -16,7 +16,7 @@ class SimpleRnn(object):
     def recurrent_step(self, x_t, h_t0):
         # calc new hidden state; elementwise add of embedded input & 
         # recurrent weights dot _last_ hiddenstate
-        h_t = T.nnet.sigmoid(self.t_Wx[:, x_t] + T.dot(self.t_Wrec, h_t0))
+        h_t = T.tanh(self.t_Wx[:, x_t] + T.dot(self.t_Wrec, h_t0))
 
         # calc output; softmax over output weights dot hidden state
         y_t = T.flatten(T.nnet.softmax(T.dot(self.t_Wy, h_t)), 1)

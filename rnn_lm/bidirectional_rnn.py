@@ -22,7 +22,7 @@ class BidirectionalRnn(object):
                        Wx, Wrec, Wy):  # non_sequences
         # calc new hidden state; elementwise add of embedded input &
         # recurrent weights dot _last_ hiddenstate
-        h_t = T.nnet.sigmoid(Wx[:, x_t] + T.dot(Wrec, h_t0))
+        h_t = T.tanh(Wx[:, x_t] + T.dot(Wrec, h_t0))
         # calc contribution to y
         y_t = T.dot(Wy, h_t)
         # return next hidden state and y contribution
