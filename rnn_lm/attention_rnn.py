@@ -21,7 +21,6 @@ class AttentionRnn(object):
         return [self.Wx, self.Whx, self.Wag, self.Wug, self.wgs, self.Wy]
 
     def _annotation_step(self, x_t, h_t_minus_1):
-        # TODO: move self.refs to be passed as non sequences
         # calc new hidden state; elementwise add of embedded input &
         # recurrent weights dot last hiddenstate
         embedding = self.Wx[:, x_t]
@@ -30,7 +29,6 @@ class AttentionRnn(object):
         return [h_t, h_t]
 
     def _attended_annotation(self, u, annotations):
-        # TODO: put selfs back in for Wag, Wug and wgs
         # first we need to mix the annotations using 'u' as a the context of
         # attention. we'll be doing _all_ annotations wrt u in one hit, so we
         # need a column broadcastable version of u
