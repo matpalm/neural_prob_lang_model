@@ -47,7 +47,8 @@ class AttentionRnn(object):
 
         # attended version of the annotations is the the affine combo of the
         # annotations using the normalised glimpses as the combo weights
-        return T.dot(annotations.T, glimpses)
+        attended_annotations = T.dot(annotations.T, glimpses)
+        return [attended_annotations, glimpses]
 
     def _softmax(self, annotation):
         # calc output; softmax over output weights dot hidden state
@@ -63,11 +64,11 @@ class AttentionRnn(object):
                                                 outputs_info=[None, self.ah0])
 
         # second pass; calculate annotations
-        attended_annotations, _ = theano.scan(fn=self._attended_annotation,
-                                              sequences=[x],
-                                              non_sequences=[annotations])
+        [attended_annotations, glimpses], _ = theano.scan(fn=self._attended_annotation,
+                                                          sequences=[x],
+                                                          non_sequences=[annotations])
 
         # final pass; apply softmax
         y_softmax, _ = theano.scan(fn=self._softmax,
                                    sequences=[attended_annotations])
-        return y_softmax
+        return y_softmax, glimpses

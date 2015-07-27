@@ -57,7 +57,7 @@ else:
 
 # calculate y based on x and initial hidden state of 0
 t_h0 = theano.shared(np.zeros(n_hidden, dtype='float32'), name='h0', borrow=True)
-t_y_softmax = rnn.t_y_softmax(t_x, t_h0)
+t_y_softmax, glimpses = rnn.t_y_softmax(t_x, t_h0)
 
 # loss is just cross entropy of the softmax output compared to the target
 cross_entropy = T.mean(T.nnet.categorical_crossentropy(t_y_softmax, t_y))
@@ -99,7 +99,7 @@ train_fn = theano.function(inputs=[t_x, t_y],
 
 # compile function to emit predictions
 predict_fn = theano.function(inputs=[t_x],
-                             outputs=t_y_softmax)  # full distribution
+                             outputs=[t_y_softmax, glimpses])  # full distribution
 
 print "compilation took %0.3f s" % (time.time()-compile_start_time)
 
@@ -115,12 +115,19 @@ for epoch in range(opts.epochs):
 
     # test on another 100
     prob_seqs = []
-    for _ in xrange(100):
+    for test_idx in xrange(100):
         probabilities = []
         test_eg = rb.ids_for(rb.embedded_reber_sequence())
         x, y = test_eg[:-1], test_eg[1:]
-        y_softmaxs = predict_fn(x)
-        for y_true_i, y_softmax in zip(y, y_softmaxs):
+        print "test_idx", test_idx
+        print "x", rb.tokens_for(x)
+        print "y", rb.tokens_for(y)
+        y_softmaxs, glimpses = predict_fn(x)
+#        print "glimpses", glimpses
+        for n, (y_true_i, y_softmax, glimpse) in enumerate(zip(y, y_softmaxs, glimpses)):
+            print "n=%s y_true_i=%s" % (n, y_true_i)
+            print "  y_softmax", zip(rb.LABELS, util.float_array_to_str(y_softmax))
+            print "  glimpse", zip(rb.tokens_for(x), util.float_array_to_str(glimpse))
             y_true_confidence = y_softmax[y_true_i]
             probabilities.append(y_true_confidence)
         prob_seqs.append(probabilities)

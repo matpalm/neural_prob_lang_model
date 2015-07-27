@@ -25,6 +25,10 @@ def sharedMatrix(n_rows, n_cols, name):
 def sharedVector(n_elems, name):
     return theano.shared(np.asarray(np.random.randn(n_elems), dtype='float32'), name=name, borrow=True)
 
+def float_array_to_str(ns, sd=2):
+    format_string = "%%.0%df" % sd
+    return [format_string % n for n in ns]
+
 #def pad_sequences(seqs, padding="0"):
 #    max_sequence_length = max([len(seq) for seq in seqs])
 #    for seq in seqs:

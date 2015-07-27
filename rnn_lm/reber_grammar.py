@@ -29,12 +29,18 @@ def embedded_reber_sequence(include_start_end=True):
         embedded_sequence = ["<s>"] + embedded_sequence #+ ["</s>"]
     return embedded_sequence
 
-VOCAB = dict([(c, n) for n, c in enumerate(['B','E','T','P','S','X','V','<s>','</s>'])])
+LABELS = ['<s>','B','E','T','P','S','X','V','</s>']
+VOCAB_C_N = dict([(c, n) for n, c in enumerate(LABELS)])
+VOCAB_N_C = dict([(n, c) for c, n in VOCAB_C_N.iteritems()])
+
 def ids_for(tokens):
-    return [VOCAB[t] for t in tokens]
+    return [VOCAB_C_N[t] for t in tokens]
+
+def tokens_for(ids):
+    return [VOCAB_N_C[n] for n in ids]
 
 def vocab_size():
-    return len(VOCAB)
+    return len(VOCAB_C_N)
 
 if __name__ == "__main__":
     import sys
