@@ -22,6 +22,9 @@ def prob_stats(x, y, probs):
 def sharedMatrix(n_rows, n_cols, name):
     return theano.shared(np.asarray(np.random.randn(n_rows, n_cols), dtype='float32'), name=name, borrow=True)
 
+def sharedVector(n_elems, name):
+    return theano.shared(np.asarray(np.random.randn(n_elems), dtype='float32'), name=name, borrow=True)
+
 #def pad_sequences(seqs, padding="0"):
 #    max_sequence_length = max([len(seq) for seq in seqs])
 #    for seq in seqs:

@@ -17,12 +17,17 @@ import theano.tensor as T
 from simple_rnn import SimpleRnn
 from bidirectional_rnn import BidirectionalRnn
 from gru_rnn import GruRnn
+from attention_rnn import AttentionRnn
 
 optparser = optparse.OptionParser(prog='rnn')
 optparser.add_option('--adaptive-learning-rate', None, dest='adaptive_learning_rate_fn', type='string',
                      default="rmsprop", help='adaptive learning rate method')
 optparser.add_option('--type', None, dest='type', type='string',
-                     default="", help='rnn type; simple, bidirectional or gru')
+                     default="", help='rnn type; simple, bidirectional, gru or attention')
+optparser.add_option('--epochs', None, dest='epochs', type='int',
+                     default=5, help='number of epoches to run')
+optparser.add_option('--num-hidden', None, dest='num_hidden', type='int',
+                     default=10, help='hidden node dimensionality')
 opts, _arguments = optparser.parse_args()
 
 # data is just characters, ['A', 'B', 'A', ... ]
@@ -31,7 +36,7 @@ opts, _arguments = optparser.parse_args()
 
 # matrix sizing
 n_in = rb.vocab_size()
-n_hidden = 10
+n_hidden = opts.num_hidden
 
 # t_x input and t_y output sequence
 t_x = T.ivector('x')  # eg s A B A D   for sequence A B A D
@@ -45,6 +50,8 @@ elif opts.type == "bidirectional":
     rnn = BidirectionalRnn(n_in, n_hidden)
 elif opts.type == "gru":
     rnn = GruRnn(n_in, n_hidden)
+elif opts.type == "attention":
+    rnn = AttentionRnn(n_in, n_hidden)
 else:
     raise "unknown rnn type? [%s]" % opts.type
 
@@ -96,7 +103,7 @@ predict_fn = theano.function(inputs=[t_x],
 
 print "compilation took %0.3f s" % (time.time()-compile_start_time)
 
-for epoch in range(5):
+for epoch in range(opts.epochs):
     start_time = time.time()
 
     # train on 1000 examples. no batching yet!! o_O
