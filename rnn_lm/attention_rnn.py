@@ -9,7 +9,6 @@ class AttentionRnn(object):
         # for trivial annotation network
         self.Wx = util.sharedMatrix(n_hidden, n_in, 'Wx')  # embeddings
         self.Whx = util.sharedMatrix(n_hidden, n_hidden, 'Whx')
-        self.ah0 = np.zeros(n_hidden, dtype=np.float32).T  # note: not a learnt param
         # for attention network
         self.Wag = util.sharedMatrix(n_hidden, n_hidden, 'Wag')
         self.Wug = util.sharedMatrix(n_hidden, n_hidden, 'Wug')
@@ -59,7 +58,7 @@ class AttentionRnn(object):
         # to use a bidirectional net here.
         [annotations, _hidden], _ = theano.scan(fn=self._annotation_step,
                                                 sequences=[x],
-                                                outputs_info=[None, self.ah0])
+                                                outputs_info=[None, h0])
 
         # second pass; calculate annotations
         [attended_annotations, glimpses], _ = theano.scan(fn=self._attended_annotation,

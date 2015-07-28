@@ -26,7 +26,7 @@ def embedded_reber_sequence(include_start_end=True):
     path = "T" if coin_flip() else "P"
     embedded_sequence = ["B"] + [path] + reber_sequence() + [path] + ["E"]
     if include_start_end:
-        embedded_sequence = ["<s>"] + embedded_sequence #+ ["</s>"]
+        embedded_sequence = ["<s>"] + embedded_sequence + ["</s>"]
     return embedded_sequence
 
 LABELS = ['<s>','B','E','T','P','S','X','V','</s>']

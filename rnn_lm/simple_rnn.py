@@ -6,21 +6,21 @@ import theano.tensor as T
 
 class SimpleRnn(object):
     def __init__(self, n_in, n_hidden):
-        self.t_Wx = util.sharedMatrix(n_hidden, n_in, 'Wx')
-        self.t_Wrec = util.sharedMatrix(n_hidden, n_hidden, 'Wrec')
-        self.t_Wy = util.sharedMatrix(n_in, n_hidden, 'Wy')
+        self.Wx = util.sharedMatrix(n_hidden, n_in, 'Wx')
+        self.Wrec = util.sharedMatrix(n_hidden, n_hidden, 'Wrec')
+        self.Wy = util.sharedMatrix(n_in, n_hidden, 'Wy')
 
     def params(self):
-        return [self.t_Wx, self.t_Wrec, self.t_Wy]
+        return [self.Wx, self.Wrec, self.Wy]
 
     def recurrent_step(self, x_t, h_t_minus_1):
         # calc new hidden state; elementwise add of embedded input & 
         # recurrent weights dot _last_ hiddenstate
-        embedding = self.t_Wx[:, x_t]
-        h_t = T.tanh(embedding + T.dot(self.t_Wrec, h_t_minus_1))
+        embedding = self.Wx[:, x_t]
+        h_t = T.tanh(embedding + T.dot(self.Wrec, h_t_minus_1))
 
         # calc output; softmax over output weights dot hidden state
-        y_t = T.flatten(T.nnet.softmax(T.dot(self.t_Wy, h_t)), 1)
+        y_t = T.flatten(T.nnet.softmax(T.dot(self.Wy, h_t)), 1)
 
         # return what we want to have per output step
         return [h_t, y_t]
@@ -29,4 +29,6 @@ class SimpleRnn(object):
         [_hs, y_softmax], _ = theano.scan(fn=self.recurrent_step,
                                              sequences=[x],
                                              outputs_info=[h0, None])
-        return y_softmax
+        # we return h0 to denote no additional debugging info supplied with softmax
+        # TODO fix this; super clumsy api
+        return y_softmax, h0

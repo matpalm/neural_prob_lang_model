@@ -56,6 +56,8 @@ else:
     raise "unknown rnn type? [%s]" % opts.type
 
 # calculate y based on x and initial hidden state of 0
+# note for rnns that don't support glimpses the value returned for glimpses will be h0
+# TODO this returning h0 is super clusmy, need to fix the API
 t_h0 = theano.shared(np.zeros(n_hidden, dtype='float32'), name='h0', borrow=True)
 t_y_softmax, glimpses = rnn.t_y_softmax(t_x, t_h0)
 
@@ -99,7 +101,8 @@ train_fn = theano.function(inputs=[t_x, t_y],
 
 # compile function to emit predictions
 predict_fn = theano.function(inputs=[t_x],
-                             outputs=[t_y_softmax, glimpses])  # full distribution
+                             outputs=[t_y_softmax, glimpses])
+
 
 print "compilation took %0.3f s" % (time.time()-compile_start_time)
 
@@ -111,27 +114,34 @@ for epoch in range(opts.epochs):
         training_eg = rb.ids_for(rb.embedded_reber_sequence())
         x, y = training_eg[:-1], training_eg[1:]
         cost, = train_fn(x, y)
-        #print "COST\t%s" % cost
 
-    # test on another 100
+    # test on more, for now just 1 since we're hacking
+    # with glimpse vectors
     prob_seqs = []
-    for test_idx in xrange(100):
+    for test_idx in xrange(1):
         probabilities = []
         test_eg = rb.ids_for(rb.embedded_reber_sequence())
         x, y = test_eg[:-1], test_eg[1:]
         print "test_idx", test_idx
         print "x", rb.tokens_for(x)
         print "y", rb.tokens_for(y)
+
         y_softmaxs, glimpses = predict_fn(x)
-#        print "glimpses", glimpses
+
+        # need to have glimpses len match y for the zip so swap
+        # h0 "marker" for [None]
+        # OMG such clumsy, much hack, terrible API.
+        if glimpses[0].__class__ == np.float32:
+            glimpses = [None] * len(y)
+
         for n, (y_true_i, y_softmax, glimpse) in enumerate(zip(y, y_softmaxs, glimpses)):
-            print "n=%s y_true_i=%s" % (n, y_true_i)
+            print "(%s) -> (%s)" % (rb.LABELS[x[n]], rb.LABELS[y_true_i])
             print "  y_softmax", zip(rb.LABELS, util.float_array_to_str(y_softmax))
-            print "  glimpse", zip(rb.tokens_for(x), util.float_array_to_str(glimpse))
+            if glimpse is not None:
+                print "  glimpse", zip(rb.tokens_for(x), util.float_array_to_str(glimpse))
             y_true_confidence = y_softmax[y_true_i]
             probabilities.append(y_true_confidence)
         prob_seqs.append(probabilities)
-        #print util.prob_stats(x, y, probabilities)
 
     print "epoch", epoch,
     print util.perplexity_stats(prob_seqs),

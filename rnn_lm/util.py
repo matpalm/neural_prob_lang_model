@@ -12,8 +12,8 @@ def stats(values):
 
 def perplexity_stats(prob_seqs):
     perplexities = [perplexity_of_sequence(prob_seq) for prob_seq in prob_seqs]
-    second_last_probs = [prob_seq[-2] for prob_seq in prob_seqs]
-    return "min, mean, max  perplexity %s  second_last %s" % (stats(perplexities), stats(second_last_probs))
+    third_last_probs = [prob_seq[-2] for prob_seq in prob_seqs]
+    return "min, mean, max  perplexity %s  third_last %s" % (stats(perplexities), stats(third_last_probs))
 
 def prob_stats(x, y, probs):
     probs_str = ["%.2f" % p for p in probs]
